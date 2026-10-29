@@ -26,5 +26,18 @@ para todas as flores presentes na composição. Os dados serão obtidos a partir
 Perenual, complementados por um conjunto de dados local para garantir a completude das
 informações exibidas na interface.
 
-
 ## Como Executar o Projeto
+
+Abra um terminal dentro da pasta do projeto e execute:
+
+```bash
+npm run dev
+# or
+yarn dev
+# or
+pnpm dev
+# or
+bun dev
+```
+
+Abra http://localhost:3000 ou http://localhost:3000 no navegador para ver o resultado.
