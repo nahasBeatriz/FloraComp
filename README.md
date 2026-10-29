@@ -28,15 +28,18 @@ informações exibidas na interface.
 
 ## Como Executar o Projeto
 
-Abra um terminal dentro da pasta do projeto e execute:
+Abra um terminal dentro da pasta do projeto e execute de acordo com o que está instalado na sua máquina:
 
 ```bash
 npm run dev
-# or
+```
+```bash
 yarn dev
-# or
+```
+```bash
 pnpm dev
-# or
+```
+```bash
 bun dev
 ```
 
