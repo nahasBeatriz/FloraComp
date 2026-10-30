@@ -1,0 +1,52 @@
+@import "tailwindcss";
+
+@theme {
+    --color-flora-green-900: #1b4332;
+    --color-flora-green-800: #2d6a4f;
+    --color-flora-green-700: #40916c;
+    --color-flora-green-600: #52b788;
+    --color-flora-green-400: #74c69d;
+    --color-flora-green-200: #b7e4c7;
+    --color-flora-green-100: #d8f3dc;
+    --color-flora-green-50:  #f0faf2;
+
+    --color-flora-rose-500:  #c9848a;
+    --color-flora-rose-400:  #dba5aa;
+    --color-flora-rose-200:  #f0d1d3;
+    --color-flora-rose-100:  #faeced;
+
+    --color-flora-cream:     #faf7f2;
+    --color-flora-earth:     #8b6e52;
+    --color-flora-earth-200: #d4bfa8;
+
+    --font-family-display: "Georgia", serif;
+    --font-family-sans: system-ui, sans-serif;
+
+    --radius-card: 1rem;
+}
+
+/* Modo escuro */
+:root[data-theme="dark"] {
+    --bg-page: #0f1a12;
+    --bg-card: #1a2e1e;
+    --bg-surface: #243328;
+    --text-primary: #e8f5eb;
+    --text-secondary: #a8c9ae;
+    --border-color: #2d4a32;
+}
+
+:root:not([data-theme="dark"]) {
+    --bg-page: #faf7f2;
+    --bg-card: #ffffff;
+    --bg-surface: #f0faf2;
+    --text-primary: #1b4332;
+    --text-secondary: #40916c;
+    --border-color: #d8f3dc;
+}
+
+body {
+    background-color: var(--bg-page);
+    color: var(--text-primary);
+    font-family: var(--font-family-sans);
+    transition: background-color 0.2s, color 0.2s;
+}
