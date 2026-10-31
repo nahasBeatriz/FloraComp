@@ -1,149 +1,109 @@
-import Link from "next/link";
-import SeasonBanner from "@/components/seasonal/SeasonBanner";
+"use client";
 
-const FEATURES = [
-    {
-        href: "/catalog",
-        icon: "🌺",
-        title: "Catálogo de Flores",
-        description: "Explore centenas de espécies com filtros por luminosidade, frequência de rega e estação ideal.",
-        cta: "Ver catálogo",
-        accent: "#2d6a4f",
-    },
-    {
-        href: "/arrangement",
-        icon: "✂️",
-        title: "Montar Arranjo",
-        description: "Arraste flores para a área de composição e receba feedback de compatibilidade em tempo real.",
-        cta: "Criar arranjo",
-        accent: "#c9848a",
-    },
-    {
-        href: "/gallery",
-        icon: "🖼️",
-        title: "Minha Galeria",
-        description: "Seus arranjos salvos com ficha consolidada de cuidados para cada composição.",
-        cta: "Ver galeria",
-        accent: "#8b6e52",
-    },
-    {
-        href: "/favorites",
-        icon: "❤️",
-        title: "Favoritas",
-        description: "Suas flores favoritas salvas para consultar rapidamente na hora de montar um novo arranjo.",
-        cta: "Ver favoritas",
-        accent: "#40916c",
-    },
-];
+import { useState, useEffect, useCallback } from "react";
+import FlowerCard from "@/components/flower/FlowerCard";
+import FilterPanel from "@/components/flower/FilterPanel";
+import type { Flower } from "@/types/flower";
+import type { FlowerFilters } from "@/types/filters";
+import { DEFAULT_FILTERS } from "@/types/filters";
 
-export default function HomePage() {
+export default function CatalogPage() {
+    const [flowers, setFlowers] = useState<Flower[]>([]);
+    const [filters, setFilters] = useState<FlowerFilters>(DEFAULT_FILTERS);
+    const [page, setPage] = useState(1);
+    const [lastPage, setLastPage] = useState(1);
+    const [loading, setLoading] = useState(false);
+    const [favorites, setFavorites] = useState<Set<number>>(new Set());
+
+    const fetchFlowers = useCallback(async () => {
+        setLoading(true);
+        const params = new URLSearchParams({ page: String(page) });
+        if (filters.search)   params.set("search", filters.search);
+        if (filters.sunlight) params.set("sunlight", filters.sunlight);
+        if (filters.watering) params.set("watering", filters.watering);
+        if (filters.season)   params.set("season", filters.season);
+
+        try {
+        const res = await fetch(`/api/flowers?${params}`);
+        const json = await res.json();
+        setFlowers(json.data ?? []);
+        setLastPage(json.lastPage ?? 1);
+        } finally {
+        setLoading(false);
+        }
+    }, [filters, page]);
+
+    useEffect(() => { fetchFlowers(); }, [fetchFlowers]);
+
+    // Reset para página 1 ao mudar filtros
+    const handleFilterChange = (f: FlowerFilters) => {
+        setFilters(f);
+        setPage(1);
+    };
+
+    const toggleFavorite = (id: number) => {
+        setFavorites((prev) => {
+        const next = new Set(prev);
+        next.has(id) ? next.delete(id) : next.add(id);
+        return next;
+        });
+    };
+
     return (
-        <div>
-        {/* Hero */}
-        <section
-            className="relative overflow-hidden py-20 px-4"
-            style={{
-            background: "linear-gradient(135deg, var(--color-flora-green-900) 0%, var(--color-flora-green-700) 60%, var(--color-flora-green-400) 100%)",
-            }}>
-            {/* Decoração de fundo */}
-            <div className="absolute inset-0 opacity-10 text-9xl select-none flex flex-wrap gap-8 p-8 overflow-hidden leading-none pointer-events-none" aria-hidden>
-            {["🌸", "🌺", "🌻", "🌹", "🌼", "🌷", "🪷", "💐", "🌸", "🌺", "🌻"].map((f, i) => (
-                <span key={i}>{f}</span>
-            ))}
+        <main className="min-h-screen px-4 py-8 max-w-7xl mx-auto">
+        <h1 className="text-3xl font-bold mb-2" style={{ color: "var(--text-primary)" }}>
+            Catálogo de Flores
+        </h1>
+        <p className="mb-6 text-sm" style={{ color: "var(--text-secondary)" }}>
+            Explore espécies e filtre por luz, rega e estação
+        </p>
+
+        <div className="flex flex-col md:flex-row gap-6">
+            {/* Filtros */}
+            <div className="w-full md:w-56 shrink-0">
+            <FilterPanel filters={filters} onChange={handleFilterChange} />
             </div>
 
-            <div className="relative max-w-3xl mx-auto text-center">
-            <p className="text-white/70 text-sm font-medium tracking-widest uppercase mb-3">
-                Programação de Aplicações Web
-            </p>
-            <h1
-                className="text-5xl md:text-6xl font-bold text-white mb-4 leading-tight"
-                style={{ fontFamily: "Georgia, serif" }}>
-                FloraComp
-            </h1>
-            <p className="text-white/80 text-lg md:text-xl mb-8 max-w-xl mx-auto">
-                Explore flores, crie arranjos personalizados e descubra quais espécies combinam entre si.
-            </p>
-            <div className="flex flex-wrap gap-3 justify-center">
-                <Link
-                href="/catalog"
-                className="px-6 py-3 rounded-full font-semibold text-sm transition-all hover:scale-105"
-                style={{ backgroundColor: "white", color: "var(--color-flora-green-800)" }}
-                >
-                🌺 Explorar catálogo
-                </Link>
-                <Link
-                href="/arrangement"
-                className="px-6 py-3 rounded-full font-semibold text-sm transition-all hover:scale-105 border border-white/40"
-                style={{ backgroundColor: "transparent", color: "white" }}>
-                Criar arranjo
-                </Link>
-            </div>
-            </div>
-        </section>
+            {/* Grid */}
+            <div className="flex-1">
+            {loading ? (
+                <div className="flex justify-center items-center h-48">
+                <span className="text-2xl animate-spin">🌸</span>
+                </div>
+            ) : flowers.length === 0 ? (
+                <div className="text-center py-16" style={{ color: "var(--text-secondary)" }}>
+                Nenhuma flor encontrada com esses filtros.
+                </div>
+            ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {flowers.map((flower) => (
+                    <FlowerCard key={flower.id} flower={flower}
+                    isFavorite={favorites.has(flower.perenualId ?? flower.id)}
+                    onToggleFavorite={toggleFavorite} />
+                ))}
+                </div>
+            )}
 
-        {/* Banner da estação atual */}
-        <SeasonBanner />
-
-        {/* Cards de funcionalidades */}
-        <section className="max-w-7xl mx-auto px-4 py-16">
-            <h2
-            className="text-2xl font-bold text-center mb-10"
-            style={{ color: "var(--text-primary)", fontFamily: "Georgia, serif" }}>
-            O que você pode fazer
-            </h2>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
-            {FEATURES.map((feat) => (
-                <Link
-                key={feat.href}
-                href={feat.href}
-                className="group rounded-2xl p-6 flex flex-col gap-3 border transition-all hover:-translate-y-1 hover:shadow-lg"
-                style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}>
-                <span className="text-4xl">{feat.icon}</span>
-                <h3
-                    className="font-bold text-base"
-                    style={{ color: "var(--text-primary)", fontFamily: "Georgia, serif" }}>
-                    {feat.title}
-                </h3>
-                <p className="text-sm flex-1 leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                    {feat.description}
-                </p>
-                <span
-                    className="text-sm font-semibold mt-1 group-hover:underline"
-                    style={{ color: feat.accent }}>
-                    {feat.cta} →
+            {/* Paginação */}
+            {!loading && lastPage > 1 && (
+                <div className="flex justify-center gap-2 mt-8">
+                <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1}
+                    className="px-4 py-2 rounded-lg text-sm disabled:opacity-40"
+                    style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}>
+                    ← Anterior
+                </button>
+                <span className="px-4 py-2 text-sm" style={{ color: "var(--text-secondary)" }}>
+                    {page} / {lastPage}
                 </span>
-                </Link>
-            ))}
+                <button onClick={() => setPage((p) => Math.min(lastPage, p + 1))} disabled={page === lastPage}
+                    className="px-4 py-2 rounded-lg text-sm disabled:opacity-40"
+                    style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}>
+                    Próxima →
+                </button>
+                </div>
+            )}
             </div>
-        </section>
-
-        {/* Sobre a API */}
-        <section className="max-w-7xl mx-auto px-4 pb-16">
-            <div
-            className="rounded-2xl px-8 py-8 flex flex-col md:flex-row items-center gap-6 border"
-            style={{ backgroundColor: "var(--bg-surface)", borderColor: "var(--border-color)" }}>
-            <div className="text-5xl">🔌</div>
-            <div>
-                <h3 className="font-bold text-lg mb-1" style={{ color: "var(--text-primary)" }}>
-                Dados reais da API Perenual
-                </h3>
-                <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
-                O catálogo é alimentado pela{" "}
-                <a
-                    href="https://perenual.com"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="underline"
-                    style={{ color: "var(--color-flora-green-600)" }}>
-                    API pública Perenual
-                </a>
-                , que fornece informações botânicas de milhares de espécies. Os arranjos e favoritos ficam salvos no banco de dados local da aplicação.
-                </p>
-            </div>
-            </div>
-        </section>
         </div>
+        </main>
     );
 }
