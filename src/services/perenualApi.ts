@@ -31,7 +31,7 @@ export function perenualToFlower(p: PerenualFlower): Flower {
     return {
         id: p.id,
         perenualId: p.id,
-        name: p.scientific_name[0] ?? p.common_name,
+        name: p.scientific_name?.[0] ?? p.common_name,
         commonName: p.common_name,
         description: p.description,
         sunlight: mapSunlight(p.sunlight),
