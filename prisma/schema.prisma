@@ -1,8 +1,6 @@
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
-
 generator client {
   provider = "prisma-client"
   output   = "../src/generated/prisma"
@@ -10,4 +8,44 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+}
+
+model Flower {
+  id          Int     @id @default(autoincrement())
+  perenualId  Int?    @unique // ID da API Perenual (null para flores locais apenas)
+  name        String
+  commonName  String?
+  description String?
+  sunlight    String  // "full_sun" | "part_shade" | "full_shade"
+  watering    String  // "frequent" | "average" | "minimum"
+  season      String  // "spring" | "summer" | "fall" | "winter"
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  arrangementFlowers ArrangementFlower[]
+}
+
+model Arrangement {
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+
+  flowers ArrangementFlower[]
+}
+
+model ArrangementFlower {
+  id            Int   @id @default(autoincrement())
+  arrangementId Int
+  flowerId      Int
+  positionX     Float @default(0)
+  positionY     Float @default(0)
+
+  arrangement Arrangement @relation(fields: [arrangementId], references: [id], onDelete: Cascade)
+  flower      Flower      @relation(fields: [flowerId], references: [id])
+}
+
+model Favorite {
+  id         Int      @id @default(autoincrement())
+  perenualId Int      @unique
+  createdAt  DateTime @default(now())
 }
