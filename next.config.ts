@@ -12,6 +12,18 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.wasabisys.com",
+      },
+      {
+        protocol: "https",
+        hostname: "perenual.com",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
