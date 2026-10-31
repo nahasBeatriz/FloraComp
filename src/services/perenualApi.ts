@@ -4,15 +4,15 @@ const API_KEY = process.env.PERENUAL_API_KEY!;
 const BASE_URL = "https://perenual.com/api/v2";
 
 // Converte os valores da Perenual para os nossos tipos
-function mapSunlight(sunlight: string[]): Sunlight {
-    const s = (sunlight[0] ?? "").toLowerCase();
+function mapSunlight(sunlight: string[] | null | undefined): Sunlight {
+    const s = (sunlight?.[0] ?? "").toLowerCase();
     if (s.includes("full sun")) return "full_sun";
     if (s.includes("part") || s.includes("shade")) return "part_shade";
     return "full_shade";
 }
 
-function mapWatering(watering: string): Watering {
-    const w = watering.toLowerCase();
+function mapWatering(watering: string | null | undefined): Watering {
+    const w = (watering ?? "").toLowerCase();
     if (w === "frequent") return "frequent";
     if (w === "minimum" || w === "none") return "minimum";
     return "average";
