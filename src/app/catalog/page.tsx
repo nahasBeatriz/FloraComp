@@ -15,7 +15,6 @@ export default function CatalogPage() {
     const [loading, setLoading] = useState(false);
     const [favorites, setFavorites] = useState<Set<number>>(new Set());
 
-    // Carrega favoritos do localStorage
     useEffect(() => {
         try {
         const saved = localStorage.getItem("floracomp_favorites");
@@ -32,12 +31,12 @@ export default function CatalogPage() {
         if (filters.season)   params.set("season", filters.season);
 
         try {
-        const res = await fetch(`/api/flowers?${params}`);
-        const json = await res.json();
-        setFlowers(json.data ?? []);
-        setLastPage(json.lastPage ?? 1);
+            const res = await fetch(`/api/flowers?${params}`);
+            const json = await res.json();
+            setFlowers(json.data ?? []);
+            setLastPage(json.lastPage ?? 1);
         } finally {
-        setLoading(false);
+            setLoading(false);
         }
     }, [filters, page]);
 
@@ -63,8 +62,7 @@ export default function CatalogPage() {
         <main className="min-h-screen px-4 py-8 max-w-7xl mx-auto">
         <h1
             className="text-3xl font-bold mb-2"
-            style={{ color: "var(--text-primary)", fontFamily: "Georgia, serif" }}
-        >
+            style={{ color: "var(--text-primary)", fontFamily: "Georgia, serif" }}>
             Catálogo de Flores
         </h1>
         <p className="mb-6 text-sm" style={{ color: "var(--text-secondary)" }}>
@@ -72,16 +70,14 @@ export default function CatalogPage() {
         </p>
 
         <div className="flex flex-col md:flex-row gap-6">
-            {/* Painel de filtros */}
             <div className="w-full md:w-56 shrink-0">
             <FilterPanel filters={filters} onChange={handleFilterChange} />
             </div>
 
-            {/* Grid de flores */}
             <div className="flex-1">
             {loading ? (
                 <div className="flex justify-center items-center h-48">
-                <span className="text-3xl animate-spin">🌸</span>
+                <span className="text-3xl animate-spin">಄</span>
                 </div>
             ) : flowers.length === 0 ? (
                 <div
@@ -90,9 +86,8 @@ export default function CatalogPage() {
                     color: "var(--text-secondary)",
                     borderColor: "var(--border-color)",
                     background: "var(--bg-card)",
-                }}
-                >
-                <p className="text-4xl mb-3">🌱</p>
+                }}>
+                <p className="text-4xl mb-3">↟↟𓂃 ོ ☼𓂃↟ 𖠰𓂃 ོ𓂃</p>
                 <p>Nenhuma flor encontrada com esses filtros.</p>
                 </div>
             ) : (
@@ -102,13 +97,11 @@ export default function CatalogPage() {
                     key={flower.id}
                     flower={flower}
                     isFavorite={favorites.has(flower.perenualId ?? flower.id)}
-                    onToggleFavorite={toggleFavorite}
-                    />
+                    onToggleFavorite={toggleFavorite}/>
                 ))}
                 </div>
             )}
 
-            {/* Paginação */}
             {!loading && lastPage > 1 && (
                 <div className="flex justify-center items-center gap-3 mt-8">
                 <button
@@ -118,9 +111,8 @@ export default function CatalogPage() {
                     style={{
                     background: "var(--bg-surface)",
                     color: "var(--text-secondary)",
-                    }}
-                >
-                    ← Anterior
+                    }}>
+                    Anterior
                 </button>
                 <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
                     {page} / {lastPage}
@@ -132,9 +124,8 @@ export default function CatalogPage() {
                     style={{
                     background: "var(--bg-surface)",
                     color: "var(--text-secondary)",
-                    }}
-                >
-                    Próxima →
+                    }}>
+                    Próxima
                 </button>
                 </div>
             )}
