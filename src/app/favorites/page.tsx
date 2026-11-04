@@ -54,17 +54,15 @@ export default function FavoritesPage() {
         <div className="flex items-center justify-between mb-2">
             <h1
             className="text-3xl font-bold"
-            style={{ color: "var(--text-primary)", fontFamily: "Georgia, serif" }}
-            >
+            style={{ color: "var(--text-primary)", fontFamily: "Georgia, serif" }}>
             Favoritos
             </h1>
             {flowers.length > 0 && (
             <Link
                 href="/arrangement"
                 className="px-4 py-2 rounded-full text-sm font-semibold text-white"
-                style={{ backgroundColor: "var(--color-flora-green-700)" }}
-            >
-                🎨 Montar arranjo
+                style={{ backgroundColor: "var(--color-flora-green-700)" }}>
+                Montar arranjo
             </Link>
             )}
         </div>
@@ -74,22 +72,20 @@ export default function FavoritesPage() {
 
         {loading ? (
             <div className="flex justify-center items-center h-48">
-            <span className="text-3xl animate-spin">🌸</span>
+            <span className="text-3xl animate-spin">⚘</span>
             </div>
         ) : flowers.length === 0 ? (
             <div
             className="flex flex-col items-center justify-center gap-4 py-20 rounded-2xl border"
-            style={{ borderColor: "var(--border-color)", background: "var(--bg-card)" }}
-            >
-            <span className="text-5xl">🤍</span>
+            style={{ borderColor: "var(--border-color)", background: "var(--bg-card)" }}>
+            <span className="text-5xl">❤</span>
             <p className="text-sm" style={{ color: "var(--text-secondary)" }}>
                 Nenhuma flor favoritada ainda.
             </p>
             <Link
                 href="/catalog"
                 className="px-6 py-2 rounded-full text-sm font-semibold text-white"
-                style={{ backgroundColor: "var(--color-flora-green-700)" }}
-            >
+                style={{ backgroundColor: "var(--color-flora-green-700)" }}>
                 Explorar catálogo
             </Link>
             </div>
@@ -101,13 +97,10 @@ export default function FavoritesPage() {
                 <div
                     key={fid}
                     className="rounded-2xl border overflow-hidden flex flex-col"
-                    style={{ background: "var(--bg-card)", borderColor: "var(--border-color)" }}
-                >
-                    {/* Imagem */}
+                    style={{ background: "var(--bg-card)", borderColor: "var(--border-color)" }}>
                     <div
                     className="relative h-44 w-full"
-                    style={{ background: "var(--bg-surface)" }}
-                    >
+                    style={{ background: "var(--bg-surface)" }}>
                     {flower.imageUrl ? (
                         <Image
                         src={flower.imageUrl}
@@ -117,70 +110,59 @@ export default function FavoritesPage() {
                         sizes="(max-width: 640px) 100vw, 25vw"
                         />
                     ) : (
-                        <div className="flex items-center justify-center h-full text-4xl">🌸</div>
+                        <div className="flex items-center justify-center h-full text-4xl">⚘</div>
                     )}
                     <button
                         onClick={() => removeFavorite(fid)}
                         className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-base shadow"
                         style={{ background: "var(--bg-card)" }}
-                        aria-label="Remover dos favoritos"
-                    >
-                        ❤️
+                        aria-label="Remover dos favoritos">
+                        ⁠♡
                     </button>
                     </div>
 
-                    {/* Conteúdo */}
                     <div className="p-4 flex flex-col gap-2 flex-1">
                     <h3
                         className="font-semibold text-sm leading-tight"
-                        style={{ color: "var(--text-primary)" }}
-                    >
+                        style={{ color: "var(--text-primary)" }}>
                         {flower.commonName ?? flower.name}
                     </h3>
                     <p
                         className="text-xs italic"
-                        style={{ color: "var(--text-secondary)" }}
-                    >
+                        style={{ color: "var(--text-secondary)" }}>
                         {flower.name}
                     </p>
 
-                    {/* Badges */}
                     <div className="flex flex-wrap gap-1 mt-1">
                         <span
                         className="text-xs px-2 py-0.5 rounded-full"
-                        style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}
-                        >
-                        ☀️ {SUNLIGHT_LABELS[flower.sunlight]}
+                        style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}>
+                        ⛭ {SUNLIGHT_LABELS[flower.sunlight]}
                         </span>
                         <span
                         className="text-xs px-2 py-0.5 rounded-full"
-                        style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}
-                        >
-                        💧 {WATERING_LABELS[flower.watering]}
+                        style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}>
+                        ꧞ {WATERING_LABELS[flower.watering]}
                         </span>
                         <span
                         className="text-xs px-2 py-0.5 rounded-full"
-                        style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}
-                        >
-                        🌿 {SEASON_LABELS[flower.season]}
+                        style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}>
+                        𖠰 {SEASON_LABELS[flower.season]}
                         </span>
                     </div>
 
-                    {/* Ações */}
                     <div className="flex gap-2 mt-auto pt-2">
                         <Link
                         href={`/flower/${fid}`}
                         className="flex-1 text-xs font-medium text-center py-2 rounded-lg"
-                        style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}
-                        >
+                        style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}>
                         Ver detalhes →
                         </Link>
                         <Link
                         href={`/arrangement?add=${fid}`}
                         className="flex-1 text-xs font-medium text-center py-2 rounded-lg text-white"
-                        style={{ backgroundColor: "var(--color-flora-green-700)" }}
-                        >
-                        🎨 Arranjo
+                        style={{ backgroundColor: "var(--color-flora-green-700)" }}>
+                        Arranjo
                         </Link>
                     </div>
                     </div>
