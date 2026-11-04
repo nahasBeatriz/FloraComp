@@ -33,13 +33,11 @@ export default function Header() {
     return (
         <header className="sticky top-0 z-50 border-b" style={{ backgroundColor: "var(--bg-card)", borderColor: "var(--border-color)" }}>
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
-            {/* Logo */}
             <Link href="/" className="flex items-center gap-2 font-bold text-xl" style={{ color: "var(--text-primary)", fontFamily: "Georgia, serif" }}>
-            <span className="text-2xl">🌿</span>
+            <span className="text-2xl">˚˖𓍢ִ໋❀</span>
             <span>FloraComp</span>
             </Link>
 
-            {/* Nav desktop */}
             <nav className="hidden md:flex items-center gap-1">
             {NAV_LINKS.map((link) => {
                 const active = pathname.startsWith(link.href);
@@ -51,38 +49,32 @@ export default function Header() {
                     style={{
                     backgroundColor: active ? "var(--color-flora-green-700)" : "transparent",
                     color: active ? "#fff" : "var(--text-secondary)",
-                    }}
-                >
+                    }}>
                     {link.label}
                 </Link>
                 );
             })}
             </nav>
 
-            {/* Ações */}
             <div className="flex items-center gap-2">
             <button
                 onClick={toggleTheme}
                 aria-label="Alternar tema"
                 className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
-                style={{ backgroundColor: "var(--bg-surface)", color: "var(--text-secondary)" }}
-            >
-                {theme === "light" ? "🌙" : "☀️"}
+                style={{ backgroundColor: "var(--bg-surface)", color: "var(--text-secondary)" }}>
+                {theme === "light" ? "⏾⋆." : "☀⋆☀︎｡︎"}
             </button>
 
-            {/* Hamburger mobile */}
             <button
                 className="md:hidden w-9 h-9 rounded-full flex items-center justify-center"
                 style={{ backgroundColor: "var(--bg-surface)", color: "var(--text-secondary)" }}
                 onClick={() => setMenuOpen((v) => !v)}
-                aria-label="Menu"
-            >
+                aria-label="Menu">
                 {menuOpen ? "✕" : "☰"}
             </button>
             </div>
         </div>
 
-        {/* Nav mobile */}
         {menuOpen && (
             <div className="md:hidden border-t px-4 py-3 flex flex-col gap-1" style={{ borderColor: "var(--border-color)", backgroundColor: "var(--bg-card)" }}>
             {NAV_LINKS.map((link) => (
@@ -91,8 +83,7 @@ export default function Header() {
                 href={link.href}
                 onClick={() => setMenuOpen(false)}
                 className="px-4 py-2 rounded-lg text-sm font-medium"
-                style={{ color: "var(--text-secondary)" }}
-                >
+                style={{ color: "var(--text-secondary)" }}>
                 {link.label}
                 </Link>
             ))}
