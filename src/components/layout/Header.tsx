@@ -62,7 +62,7 @@ export default function Header() {
                 aria-label="Alternar tema"
                 className="w-9 h-9 rounded-full flex items-center justify-center transition-colors"
                 style={{ backgroundColor: "var(--bg-surface)", color: "var(--text-secondary)" }}>
-                {theme === "light" ? "⏾⋆." : "☀⋆☀︎｡︎"}
+                {theme === "light" ? "⏾⋆." : "☀⋆"}
             </button>
 
             <button
