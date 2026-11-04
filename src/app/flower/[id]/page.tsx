@@ -8,22 +8,21 @@ import type { Flower } from "@/types/flower";
 import { SUNLIGHT_LABELS, WATERING_LABELS, SEASON_LABELS } from "@/constants/filters";
 
 const CARE_ICONS: Record<string, string> = {
-    full_sun: "☀️",
-    part_shade: "⛅",
-    full_shade: "🌫️",
-    frequent: "💧💧💧",
-    average: "💧💧",
-    minimum: "💧",
-    spring: "🌸",
-    summer: "🌞",
-    fall: "🍂",
-    winter: "❄️",
+    full_sun: "𖤓",
+    part_shade: "𖤓☁",
+    full_shade: "☁",
+    frequent: "꧞꧞꧞",
+    average: "꧞꧞",
+    minimum: "꧞",
+    spring: "𖡼.𖤣𖥧𖡼.𖤣𖥧",
+    summer: "𖤓 ｡𖦹°‧ ⋆☀︎.",
+    fall: "𖡼𖤣𖥧𖡼𓋼𖤣𖥧𓋼𓍊",
+    winter: "⋆꙳•❅‧*₊⋆☃︎‧*❆₊⋆",
 };
 
 export default function FlowerDetailPage() {
     const { id } = useParams<{ id: string }>();
     const router = useRouter();
-
     const [flower, setFlower] = useState<Flower | null>(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
@@ -37,13 +36,12 @@ export default function FlowerDetailPage() {
             const data: Flower = await res.json();
             setFlower(data);
 
-            // Verifica favorito no localStorage
             try {
-            const saved = localStorage.getItem("floracomp_favorites");
-            if (saved) {
-                const ids: number[] = JSON.parse(saved);
-                setIsFavorite(ids.includes(data.perenualId ?? data.id));
-            }
+                const saved = localStorage.getItem("floracomp_favorites");
+                if (saved) {
+                    const ids: number[] = JSON.parse(saved);
+                    setIsFavorite(ids.includes(data.perenualId ?? data.id));
+                }
             } catch {}
         } catch {
             setError(true);
@@ -69,7 +67,7 @@ export default function FlowerDetailPage() {
     if (loading) {
         return (
         <div className="flex justify-center items-center min-h-96">
-            <span className="text-4xl animate-spin">🌸</span>
+            <span className="text-4xl animate-spin">಄</span>
         </div>
         );
     }
@@ -77,16 +75,15 @@ export default function FlowerDetailPage() {
     if (error || !flower) {
         return (
         <div className="max-w-2xl mx-auto px-4 py-16 text-center">
-            <p className="text-5xl mb-4">🌵</p>
+            <p className="text-5xl mb-4">𓇢𓆸</p>
             <p className="text-lg mb-6" style={{ color: "var(--text-secondary)" }}>
             Flor não encontrada.
             </p>
             <button
             onClick={() => router.back()}
             className="px-6 py-2 rounded-full text-sm font-medium"
-            style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}
-            >
-            ← Voltar
+            style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}>
+            Voltar
             </button>
         </div>
         );
@@ -94,7 +91,6 @@ export default function FlowerDetailPage() {
 
     return (
         <main className="max-w-4xl mx-auto px-4 py-8">
-        {/* Breadcrumb */}
         <nav className="mb-6 text-sm flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
             <Link href="/catalog" className="hover:underline">Catálogo</Link>
             <span>/</span>
@@ -104,31 +100,26 @@ export default function FlowerDetailPage() {
         </nav>
 
         <div className="flex flex-col md:flex-row gap-8">
-            {/* Imagem */}
             <div
             className="relative w-full md:w-80 h-72 md:h-80 rounded-2xl overflow-hidden shrink-0"
-            style={{ background: "var(--bg-surface)" }}
-            >
+            style={{ background: "var(--bg-surface)" }}>
             {flower.imageUrl ? (
                 <Image
                 src={flower.imageUrl}
                 alt={flower.commonName ?? flower.name}
                 fill
                 className="object-cover"
-                sizes="(max-width: 768px) 100vw, 320px"
-                />
+                sizes="(max-width: 768px) 100vw, 320px"/>
             ) : (
-                <div className="flex items-center justify-center h-full text-6xl">🌸</div>
+                <div className="flex items-center justify-center h-full text-6xl">⚘</div>
             )}
             </div>
 
-            {/* Informações */}
             <div className="flex flex-col gap-5 flex-1">
             <div>
                 <h1
                 className="text-3xl font-bold leading-tight"
-                style={{ color: "var(--text-primary)", fontFamily: "Georgia, serif" }}
-                >
+                style={{ color: "var(--text-primary)", fontFamily: "Georgia, serif" }}>
                 {flower.commonName ?? flower.name}
                 </h1>
                 <p className="text-sm italic mt-1" style={{ color: "var(--text-secondary)" }}>
@@ -136,11 +127,9 @@ export default function FlowerDetailPage() {
                 </p>
             </div>
 
-            {/* Badges de cuidado */}
             <div
                 className="rounded-2xl border p-4 grid grid-cols-3 gap-4"
-                style={{ background: "var(--bg-card)", borderColor: "var(--border-color)" }}
-            >
+                style={{ background: "var(--bg-card)", borderColor: "var(--border-color)" }}>
                 <div className="flex flex-col items-center gap-1 text-center">
                 <span className="text-2xl">{CARE_ICONS[flower.sunlight]}</span>
                 <span className="text-xs font-medium" style={{ color: "var(--text-primary)" }}>
@@ -164,14 +153,12 @@ export default function FlowerDetailPage() {
                 </div>
             </div>
 
-            {/* Descrição */}
             {flower.description && (
                 <p className="text-sm leading-relaxed" style={{ color: "var(--text-secondary)" }}>
                 {flower.description}
                 </p>
             )}
 
-            {/* Ações */}
             <div className="flex flex-col sm:flex-row gap-3 mt-auto">
                 <button
                 onClick={toggleFavorite}
@@ -182,14 +169,13 @@ export default function FlowerDetailPage() {
                     color: isFavorite ? "var(--color-flora-rose-500)" : "var(--text-secondary)",
                 }}
                 >
-                {isFavorite ? "❤️ Favoritada" : "🤍 Favoritar"}
+                {isFavorite ? "❤︎ Favoritada" : "♡ Favoritar"}
                 </button>
                 <Link
                 href={`/arrangement?add=${flower.perenualId ?? flower.id}`}
                 className="flex-1 py-3 rounded-full text-sm font-semibold text-center text-white transition-opacity hover:opacity-90"
-                style={{ backgroundColor: "var(--color-flora-green-700)" }}
-                >
-                🎨 Adicionar ao arranjo
+                style={{ backgroundColor: "var(--color-flora-green-700)" }}>
+                Adicionar ao arranjo
                 </Link>
             </div>
             </div>
