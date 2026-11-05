@@ -6,18 +6,18 @@ import { useEffect, useState } from "react";
 type SeasonInfo = { name: string; icon: string; tip: string; value: string };
 
 const SEASONS: SeasonInfo[] = [
-    { name: "Verão", icon: "", tip: "Orquídeas e hibiscos estão em plena floração.", value: "summer" },
-    { name: "Verão", icon: "", tip: "Orquídeas e hibiscos estão em plena floração.", value: "summer" },
-    { name: "Outono", icon: "", tip: "Crisântemos e dálias são as estrelas desta estação.", value: "fall" },
-    { name: "Outono", icon: "", tip: "Crisântemos e dálias são as estrelas desta estação.", value: "fall" },
-    { name: "Outono", icon: "", tip: "Crisântemos e dálias são as estrelas desta estação.", value: "fall" },
-    { name: "Inverno", icon: "", tip: "Camélias e violetas africanas resistem bem ao frio.", value: "winter" },
-    { name: "Inverno", icon: "", tip: "Camélias e violetas africanas resistem bem ao frio.", value: "winter" },
-    { name: "Inverno", icon: "", tip: "Camélias e violetas africanas resistem bem ao frio.", value: "winter" },
-    { name: "Primavera", icon: "", tip: "Ótima época para plantar rosas, lavandas e girassóis.", value: "spring" },
-    { name: "Primavera", icon: "", tip: "Ótima época para plantar rosas, lavandas e girassóis.", value: "spring" },
-    { name: "Primavera", icon: "", tip: "Ótima época para plantar rosas, lavandas e girassóis.", value: "spring" },
-    { name: "Verão", icon: "", tip: "Orquídeas e hibiscos estão em plena floração.", value: "summer" },
+    { name: "Verão", icon: "𖤓 ｡𖦹°‧ ⋆☀︎.", tip: "Orquídeas e hibiscos estão em plena floração.", value: "summer" },
+    { name: "Verão", icon: "𖤓 ｡𖦹°‧ ⋆☀︎.", tip: "Orquídeas e hibiscos estão em plena floração.", value: "summer" },
+    { name: "Outono", icon: "𖡼𖤣𖥧𖡼𓋼𖤣𖥧𓋼𓍊", tip: "Crisântemos e dálias são as estrelas desta estação.", value: "fall" },
+    { name: "Outono", icon: "𖡼𖤣𖥧𖡼𓋼𖤣𖥧𓋼𓍊", tip: "Crisântemos e dálias são as estrelas desta estação.", value: "fall" },
+    { name: "Outono", icon: "𖡼𖤣𖥧𖡼𓋼𖤣𖥧𓋼𓍊", tip: "Crisântemos e dálias são as estrelas desta estação.", value: "fall" },
+    { name: "Inverno", icon: "⋆꙳•❅‧*₊⋆☃︎‧*❆₊⋆", tip: "Camélias e violetas africanas resistem bem ao frio.", value: "winter" },
+    { name: "Inverno", icon: "⋆꙳•❅‧*₊⋆☃︎‧*❆₊⋆", tip: "Camélias e violetas africanas resistem bem ao frio.", value: "winter" },
+    { name: "Inverno", icon: "⋆꙳•❅‧*₊⋆☃︎‧*❆₊⋆", tip: "Camélias e violetas africanas resistem bem ao frio.", value: "winter" },
+    { name: "Primavera", icon: "°❀⋆.ೃ࿔*:･", tip: "Ótima época para plantar rosas, lavandas e girassóis.", value: "spring" },
+    { name: "Primavera", icon: "°❀⋆.ೃ࿔*:･", tip: "Ótima época para plantar rosas, lavandas e girassóis.", value: "spring" },
+    { name: "Primavera", icon: "°❀⋆.ೃ࿔*:･", tip: "Ótima época para plantar rosas, lavandas e girassóis.", value: "spring" },
+    { name: "Verão", icon: "𖤓 ｡𖦹°‧ ⋆☀︎.", tip: "Orquídeas e hibiscos estão em plena floração.", value: "summer" },
 ]; // índice = mês-1 (0=jan ... 11=dez)
 
 export default function SeasonBanner() {
@@ -41,7 +41,7 @@ export default function SeasonBanner() {
                 {season.name} no hemisfério sul
             </p>
             <p className="text-sm" style={{ color: "var(--text-primary)" }}>
-                💡 {season.tip}
+                {season.tip}
             </p>
             </div>
             <Link
