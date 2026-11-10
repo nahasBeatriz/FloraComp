@@ -26,6 +26,41 @@ para todas as flores presentes na composição. Os dados serão obtidos a partir
 Perenual, complementados por um conjunto de dados local para garantir a completude das
 informações exibidas na interface.
 
+## Decisões Técnicas
+
+Este projeto utiliza **Next.js 15** como framework principal, construído sobre **Node.js**.
+Essa escolha substitui o uso de Express.js puro, pois o Next.js já incorpora internamente um
+servidor HTTP completo, roteamento de páginas e roteamento de API — tudo o que o Express
+ofereceria, porém com menos configuração manual e maior integração com o frontend React.
+
+As rotas de API em `src/app/api/` funcionam de forma equivalente às rotas `app.get()`/`app.post()`
+do Express: recebem requisições HTTP, processam dados e retornam respostas JSON. A diferença
+está na convenção — ao invés de registrar rotas manualmente, o Next.js as infere pela
+estrutura de pastas.
+
+### Stack utilizada
+
+| Camada | Tecnologia | Função |
+|---|---|---|
+| Runtime | Node.js | Base de execução do servidor |
+| Framework | Next.js 15 (App Router) | Servidor HTTP, páginas e API routes |
+| Frontend | React 19 + TypeScript | Interface e componentes |
+| Estilização | Tailwind CSS v4 | Estilo e responsividade |
+| ORM | Prisma | Acesso ao banco de dados |
+| Banco de dados | SQLite (`dev.db`) | Persistência local de arranjos e favoritos |
+| API externa | Perenual API | Dados botânicos das flores |
+| Persistência no cliente | `localStorage` | Favoritos e galeria no navegador |
+
+### Variáveis de ambiente
+
+Crie um arquivo `.env` na raiz do projeto com:
+
+```env
+PERENUAL_API_KEY=sua_chave_aqui
+```
+
+A chave pode ser obtida gratuitamente em _https://perenual.com/docs/api_.
+
 ## Como Executar o Projeto
 
 Abra um terminal dentro da pasta do projeto e execute de acordo com o que está instalado na sua máquina:
@@ -43,4 +78,4 @@ pnpm dev
 bun dev
 ```
 
-Abra http://localhost:3000 no navegador para ver o resultado.
+Abra _http://localhost:3000_ no navegador para ver o resultado.
