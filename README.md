@@ -1,4 +1,5 @@
 # FloraComp
+
 Projeto de avaliação final desenvolvido para a disciplina de Programação de Aplicações Web.
 
 ## Proposta de Projeto
@@ -26,19 +27,7 @@ para todas as flores presentes na composição. Os dados serão obtidos a partir
 Perenual, complementados por um conjunto de dados local para garantir a completude das
 informações exibidas na interface.
 
-## Decisões Técnicas
-
-Este projeto utiliza **Next.js 15** como framework principal, construído sobre **Node.js**.
-Essa escolha substitui o uso de Express.js puro, pois o Next.js já incorpora internamente um
-servidor HTTP completo, roteamento de páginas e roteamento de API — tudo o que o Express
-ofereceria, porém com menos configuração manual e maior integração com o frontend React.
-
-As rotas de API em `src/app/api/` funcionam de forma equivalente às rotas `app.get()`/`app.post()`
-do Express: recebem requisições HTTP, processam dados e retornam respostas JSON. A diferença
-está na convenção — ao invés de registrar rotas manualmente, o Next.js as infere pela
-estrutura de pastas.
-
-### Stack utilizada
+## Stack utilizada
 
 | Camada | Tecnologia | Função |
 |---|---|---|
@@ -46,36 +35,94 @@ estrutura de pastas.
 | Framework | Next.js 15 (App Router) | Servidor HTTP, páginas e API routes |
 | Frontend | React 19 + TypeScript | Interface e componentes |
 | Estilização | Tailwind CSS v4 | Estilo e responsividade |
-| ORM | Prisma | Acesso ao banco de dados |
-| Banco de dados | SQLite (`dev.db`) | Persistência local de arranjos e favoritos |
+| ORM | Prisma 7 | Acesso ao banco de dados |
+| Banco de dados | SQLite (libSQL/Turso) | Persistência de arranjos e favoritos |
 | API externa | Perenual API | Dados botânicos das flores |
-| Persistência no cliente | `localStorage` | Favoritos e galeria no navegador |
 
-### Variáveis de ambiente
+## Decisões Técnicas
 
-Crie um arquivo `.env` na raiz do projeto com:
+Este projeto utiliza **Next.js 15** como framework principal, construído sobre **Node.js**.
+Essa escolha substitui o uso de Express.js puro, pois o Next.js já incorpora internamente um
+servidor HTTP completo, roteamento de páginas e roteamento de API.
+
+As rotas de API em `src/app/api/` funcionam de forma equivalente às rotas `app.get()`/`app.post()`
+do Express: recebem requisições HTTP, processam dados e retornam respostas JSON. A diferença
+está na convenção — ao invés de registrar rotas manualmente, o Next.js as infere pela
+estrutura de pastas.
+
+A persistência é feita inteiramente via **Prisma ORM** com **SQLite** (driver libSQL). As
+páginas do frontend se comunicam exclusivamente pelas API routes, que por sua vez usam o
+Prisma Client para ler e escrever no banco.
+
+## Pré-requisitos
+
+- Node.js 18 ou superior
+- npm, yarn, pnpm ou bun
+
+## Configuração do ambiente
+
+### 1. Crie o arquivo `.env.local`
+
+Na raiz do projeto, crie um arquivo chamado **`.env.local`** com as seguintes variáveis:
 
 ```env
+# Chave da API Perenual — obtenha gratuitamente em https://perenual.com/docs/api
 PERENUAL_API_KEY=sua_chave_aqui
+
+# URL do banco de dados SQLite local
+DATABASE_URL=file:./dev.db
 ```
 
-A chave pode ser obtida gratuitamente em _https://perenual.com/docs/api_.
-
-## Como Executar o Projeto
-
-Abra um terminal dentro da pasta do projeto e execute de acordo com o que está instalado na sua máquina:
+### 2. Instale as dependências
 
 ```bash
-npm run dev
+npm install
 ```
+
+### 3. Configure o banco de dados
+
+Gere o Prisma Client e aplique o schema ao banco:
+
 ```bash
-yarn dev
+npx prisma generate
+npx prisma db push
 ```
+
+> `prisma db push` cria o arquivo `dev.db` com todas as tabelas definidas em `prisma/schema.prisma` (Flower, Arrangement, ArrangementFlower, Favorite).
+> Execute este comando sempre que o schema for alterado.
+
+## Como executar
+
 ```bash
-pnpm dev
-```
-```bash
+npm run dev # ou
+yarn dev    # ou
+pnpm dev    # ou
 bun dev
 ```
 
 Abra _http://localhost:3000_ no navegador para ver o resultado.
+
+## Estrutura do banco de dados
+
+O Prisma gerencia as seguintes entidades:
+
+| Tabela | Função |
+|---|---|
+| `Flower` | Cache de flores da Perenual (evita rebusca) |
+| `Arrangement` | Arranjos salvos pelo usuário |
+| `ArrangementFlower` | Relação N:N entre arranjo e flores (com posição) |
+| `Favorite` | IDs Perenual das flores favoritadas |
+
+## Rotas de API
+
+| Método | Rota | Descrição |
+|---|---|---|
+| GET | `/api/flowers` | Lista flores da Perenual (com filtros e paginação) |
+| GET | `/api/flowers/[id]` | Detalhe de uma flor pelo ID Perenual |
+| GET | `/api/favorites` | Lista flores favoritadas |
+| POST | `/api/favorites` | Adiciona um favorito `{ perenualId }` |
+| DELETE | `/api/favorites` | Remove um favorito `{ perenualId }` |
+| GET | `/api/arrangements` | Lista todos os arranjos salvos |
+| POST | `/api/arrangements` | Cria um novo arranjo |
+| GET | `/api/arrangements/[id]` | Detalhe de um arranjo |
+| DELETE | `/api/arrangements/[id]` | Remove um arranjo |
