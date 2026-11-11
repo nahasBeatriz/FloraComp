@@ -109,7 +109,7 @@ function ArrangementCard({
                     <span className="ml-auto shrink-0">
                     {SUNLIGHT_LABELS[flower.sunlight].split(" ")[0]} ·{" "}
                     {WATERING_LABELS[flower.watering].split(" ")[0]} ·{" "}
-                    {SEASON_LABELS[flower.season]}
+                    {flower.season ? SEASON_LABELS[flower.season] : "—"}
                     </span>
                 </li>
                 ))}

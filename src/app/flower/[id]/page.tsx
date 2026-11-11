@@ -31,16 +31,19 @@ export default function FlowerDetailPage() {
     useEffect(() => {
         async function load() {
         try {
-            const res = await fetch(`/api/flowers/${id}`);
-            if (!res.ok) throw new Error();
-            const data: Flower = await res.json();
+            const [flowerRes, favRes] = await Promise.all([
+                fetch(`/api/flowers/${id}`),
+                fetch("/api/favorites"),
+            ]);
+            if (!flowerRes.ok) throw new Error();
+            const data: Flower = await flowerRes.json();
             setFlower(data);
 
             try {
-                const saved = localStorage.getItem("floracomp_favorites");
-                if (saved) {
-                    const ids: number[] = JSON.parse(saved);
-                    setIsFavorite(ids.includes(data.perenualId ?? data.id));
+                const favData: Flower[] = await favRes.json();
+                if (Array.isArray(favData)) {
+                    const fid = data.perenualId ?? data.id;
+                    setIsFavorite(favData.some((f) => (f.perenualId ?? f.id) === fid));
                 }
             } catch {}
         } catch {
@@ -55,13 +58,15 @@ export default function FlowerDetailPage() {
     const toggleFavorite = () => {
         if (!flower) return;
         const fid = flower.perenualId ?? flower.id;
-        try {
-        const saved = localStorage.getItem("floracomp_favorites");
-        const ids: number[] = saved ? JSON.parse(saved) : [];
-        const next = isFavorite ? ids.filter((x) => x !== fid) : [...ids, fid];
-        localStorage.setItem("floracomp_favorites", JSON.stringify(next));
-        setIsFavorite(!isFavorite);
-        } catch {}
+        const newState = !isFavorite;
+        setIsFavorite(newState);
+        fetch("/api/favorites", {
+            method: isFavorite ? "DELETE" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ perenualId: fid }),
+        }).catch(() => {
+            setIsFavorite(isFavorite);
+        });
     };
 
     if (loading) {
@@ -145,9 +150,9 @@ export default function FlowerDetailPage() {
                 <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Rega</span>
                 </div>
                 <div className="flex flex-col items-center gap-1 text-center">
-                <span className="text-2xl">{CARE_ICONS[flower.season]}</span>
+                <span className="text-2xl">{flower.season ? CARE_ICONS[flower.season] : "—"}</span>
                 <span className="text-xs font-medium" style={{ color: "var(--text-primary)" }}>
-                    {SEASON_LABELS[flower.season]}
+                    {flower.season ? SEASON_LABELS[flower.season] : "Não informada"}
                 </span>
                 <span className="text-xs" style={{ color: "var(--text-secondary)" }}>Floração</span>
                 </div>

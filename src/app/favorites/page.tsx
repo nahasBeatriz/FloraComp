@@ -127,7 +127,7 @@ export default function FavoritesPage() {
                         <span
                         className="text-xs px-2 py-0.5 rounded-full"
                         style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}>
-                        𖠰 {SEASON_LABELS[flower.season]}
+                        𖠰 {flower.season ? SEASON_LABELS[flower.season] : "—"}
                         </span>
                     </div>
 

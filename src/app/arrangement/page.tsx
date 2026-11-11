@@ -4,7 +4,7 @@ import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
-import type { Flower } from "@/types/flower";
+import type { Flower, Season } from "@/types/flower";
 import { SUNLIGHT_LABELS, WATERING_LABELS, SEASON_LABELS } from "@/constants/filters";
 
 interface PlacedFlower {
@@ -30,15 +30,16 @@ function compatibilityCheck(flowers: Flower[]): { ok: boolean; message: string }
 
 function dominantCare(flowers: Flower[]) {
     if (flowers.length === 0) return null;
-    const count = <T extends string>(arr: T[]) => {
+    const count = <T extends string>(arr: T[]): T | null => {
+        if (arr.length === 0) return null;
         const freq: Record<string, number> = {};
         arr.forEach((v) => { freq[v] = (freq[v] ?? 0) + 1; });
         return Object.entries(freq).sort((a, b) => b[1] - a[1])[0][0] as T;
     };
     return {
-        sunlight: count(flowers.map((f) => f.sunlight)),
-        watering: count(flowers.map((f) => f.watering)),
-        season: count(flowers.map((f) => f.season)),
+        sunlight: count(flowers.map((f) => f.sunlight))!,
+        watering: count(flowers.map((f) => f.watering))!,
+        season: count(flowers.map((f) => f.season).filter((s): s is Season => s !== null)),
     };
 }
 
@@ -311,7 +312,7 @@ function ArrangementContent() {
                     <div>
                     <p style={{ color: "var(--text-secondary)" }}>Estação principal</p>
                     <p className="font-medium mt-1" style={{ color: "var(--text-primary)" }}>
-                        {SEASON_LABELS[care.season]}
+                        {care.season ? SEASON_LABELS[care.season] : "—"}
                     </p>
                     </div>
                 </div>

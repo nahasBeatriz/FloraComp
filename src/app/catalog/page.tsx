@@ -1,21 +1,29 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import FlowerCard from "@/components/flower/FlowerCard";
 import FilterPanel from "@/components/flower/FilterPanel";
 import type { Flower } from "@/types/flower";
 import type { FlowerFilters } from "@/types/filters";
 import { DEFAULT_FILTERS } from "@/types/filters";
+import type { Season, Sunlight, Watering } from "@/types/flower";
 
-export default function CatalogPage() {
+function CatalogContent() {
+    const searchParams = useSearchParams();
     const [flowers, setFlowers] = useState<Flower[]>([]);
-    const [filters, setFilters] = useState<FlowerFilters>(DEFAULT_FILTERS);
+    const [filters, setFilters] = useState<FlowerFilters>({
+        ...DEFAULT_FILTERS,
+        season: (searchParams.get("season") as Season) || "",
+        sunlight: (searchParams.get("sunlight") as Sunlight) || "",
+        watering: (searchParams.get("watering") as Watering) || "",
+        search: searchParams.get("search") || "",
+    });
     const [page, setPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
     const [loading, setLoading] = useState(false);
     const [favorites, setFavorites] = useState<Set<number>>(new Set());
 
-    // Carrega favoritos do banco via API
     useEffect(() => {
         fetch("/api/favorites")
             .then((r) => r.json())
@@ -52,7 +60,6 @@ export default function CatalogPage() {
         setPage(1);
     };
 
-    // Otimista: atualiza a UI imediatamente e persiste no banco via API
     const toggleFavorite = (id: number) => {
         const isFav = favorites.has(id);
         setFavorites((prev) => {
@@ -65,7 +72,6 @@ export default function CatalogPage() {
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ perenualId: id }),
         }).catch(() => {
-            // Reverte em caso de erro
             setFavorites((prev) => {
                 const next = new Set(prev);
                 isFav ? next.add(id) : next.delete(id);
@@ -148,5 +154,13 @@ export default function CatalogPage() {
             </div>
         </div>
         </main>
+    );
+}
+
+export default function CatalogPage() {
+    return (
+        <Suspense>
+            <CatalogContent />
+        </Suspense>
     );
 }
