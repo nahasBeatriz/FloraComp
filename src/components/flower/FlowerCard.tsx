@@ -53,10 +53,12 @@ export default function FlowerCard({ flower, isFavorite = false, onToggleFavorit
                 style={{ color: "var(--text-secondary)" }}>
                 ꧞ {WATERING_LABELS[flower.watering]}
             </span>
+            {flower.season && (
             <span className="text-xs px-2 py-0.5 rounded-full bg-[var(--bg-surface)]"
                 style={{ color: "var(--text-secondary)" }}>
                 𖠰 {SEASON_LABELS[flower.season]}
             </span>
+            )}
             </div>
 
             <Link href={`/flower/${flower.perenualId ?? flower.id}`}
