@@ -132,21 +132,18 @@ export default function GalleryPage() {
     const [loaded, setLoaded] = useState(false);
 
     useEffect(() => {
-        try {
-            const saved = localStorage.getItem("floracomp_gallery");
-            if (saved) setArrangements(JSON.parse(saved));
-        } catch {}
-        setLoaded(true);
+        fetch("/api/arrangements")
+            .then((r) => r.json())
+            .then((data) => {
+                if (Array.isArray(data)) setArrangements(data);
+            })
+            .catch(() => {})
+            .finally(() => setLoaded(true));
     }, []);
 
     function deleteArrangement(id: number) {
-        setArrangements((prev) => {
-        const next = prev.filter((a) => a.id !== id);
-        try {
-            localStorage.setItem("floracomp_gallery", JSON.stringify(next));
-        } catch {}
-        return next;
-        });
+        setArrangements((prev) => prev.filter((a) => a.id !== id));
+        fetch(`/api/arrangements/${id}`, { method: "DELETE" }).catch(() => {});
     }
 
     return (

@@ -11,42 +11,22 @@ export default function FavoritesPage() {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        async function load() {
-        try {
-            const saved = localStorage.getItem("floracomp_favorites");
-            const ids: number[] = saved ? JSON.parse(saved) : [];
-
-            if (ids.length === 0) {
-            setLoading(false);
-            return;
-            }
-
-            const results = await Promise.allSettled(
-            ids.map((id) => fetch(`/api/flowers/${id}`).then((r) => r.json()))
-            );
-
-            const loaded: Flower[] = results
-            .filter((r): r is PromiseFulfilledResult<Flower> => r.status === "fulfilled" && !r.value.error)
-            .map((r) => r.value);
-
-            setFlowers(loaded);
-        } catch {}
-        setLoading(false);
-        }
-        load();
+        fetch("/api/favorites")
+            .then((r) => r.json())
+            .then((data) => {
+                if (Array.isArray(data)) setFlowers(data);
+            })
+            .catch(() => {})
+            .finally(() => setLoading(false));
     }, []);
 
     function removeFavorite(id: number) {
-        setFlowers((prev) => {
-        const next = prev.filter((f) => (f.perenualId ?? f.id) !== id);
-        try {
-            localStorage.setItem(
-            "floracomp_favorites",
-            JSON.stringify(next.map((f) => f.perenualId ?? f.id))
-            );
-        } catch {}
-        return next;
-        });
+        setFlowers((prev) => prev.filter((f) => (f.perenualId ?? f.id) !== id));
+        fetch("/api/favorites", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ perenualId: id }),
+        }).catch(() => {});
     }
 
     return (

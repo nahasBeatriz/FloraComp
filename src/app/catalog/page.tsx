@@ -15,20 +15,25 @@ export default function CatalogPage() {
     const [loading, setLoading] = useState(false);
     const [favorites, setFavorites] = useState<Set<number>>(new Set());
 
+    // Carrega favoritos do banco via API
     useEffect(() => {
-        try {
-        const saved = localStorage.getItem("floracomp_favorites");
-        if (saved) setFavorites(new Set(JSON.parse(saved)));
-        } catch {}
+        fetch("/api/favorites")
+            .then((r) => r.json())
+            .then((data: Flower[]) => {
+                if (Array.isArray(data)) {
+                    setFavorites(new Set(data.map((f) => f.perenualId ?? f.id)));
+                }
+            })
+            .catch(() => {});
     }, []);
 
     const fetchFlowers = useCallback(async () => {
         setLoading(true);
         const params = new URLSearchParams({ page: String(page) });
-        if (filters.search)   params.set("search", filters.search);
+        if (filters.search) params.set("search", filters.search);
         if (filters.sunlight) params.set("sunlight", filters.sunlight);
         if (filters.watering) params.set("watering", filters.watering);
-        if (filters.season)   params.set("season", filters.season);
+        if (filters.season) params.set("season", filters.season);
 
         try {
             const res = await fetch(`/api/flowers?${params}`);
@@ -47,14 +52,25 @@ export default function CatalogPage() {
         setPage(1);
     };
 
+    // Otimista: atualiza a UI imediatamente e persiste no banco via API
     const toggleFavorite = (id: number) => {
+        const isFav = favorites.has(id);
         setFavorites((prev) => {
-        const next = new Set(prev);
-        next.has(id) ? next.delete(id) : next.add(id);
-        try {
-            localStorage.setItem("floracomp_favorites", JSON.stringify([...next]));
-        } catch {}
-        return next;
+            const next = new Set(prev);
+            isFav ? next.delete(id) : next.add(id);
+            return next;
+        });
+        fetch("/api/favorites", {
+            method: isFav ? "DELETE" : "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ perenualId: id }),
+        }).catch(() => {
+            // Reverte em caso de erro
+            setFavorites((prev) => {
+                const next = new Set(prev);
+                isFav ? next.add(id) : next.delete(id);
+                return next;
+            });
         });
     };
 

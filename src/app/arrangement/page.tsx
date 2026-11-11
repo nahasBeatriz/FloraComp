@@ -9,7 +9,7 @@ import { SUNLIGHT_LABELS, WATERING_LABELS, SEASON_LABELS } from "@/constants/fil
 
 interface PlacedFlower {
     flower: Flower;
-    key: number; 
+    key: number;
 }
 
 function compatibilityCheck(flowers: Flower[]): { ok: boolean; message: string } {
@@ -93,19 +93,26 @@ function ArrangementContent() {
         setSaved(false);
     }
 
-    function saveArrangement() {
+    // Salva o arranjo no banco via API
+    async function saveArrangement() {
         if (placed.length === 0) return;
         try {
-        const existing = JSON.parse(localStorage.getItem("floracomp_gallery") ?? "[]");
-        const newEntry = {
-            id: Date.now(),
-            name: arrangementName,
-            createdAt: new Date().toISOString(),
-            flowers: placed.map((p) => ({ flower: p.flower, positionX: 0, positionY: 0 })),
-        };
-        localStorage.setItem("floracomp_gallery", JSON.stringify([newEntry, ...existing]));
-        setSaved(true);
-        } catch {}
+            const res = await fetch("/api/arrangements", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    name: arrangementName,
+                    flowers: placed.map((p) => ({
+                        flower: p.flower,
+                        positionX: 0,
+                        positionY: 0,
+                    })),
+                }),
+            });
+            if (res.ok) setSaved(true);
+        } catch {
+            console.error("Erro ao salvar arranjo");
+        }
     }
 
     const compat = compatibilityCheck(placed.map((p) => p.flower));
@@ -318,7 +325,7 @@ function ArrangementContent() {
                 href="/gallery"
                 className="text-sm text-center font-medium underline"
                 style={{ color: "var(--color-flora-green-600)" }}>
-                Ver na galeria 
+                Ver na galeria
                 </Link>
             )}
             </div>
