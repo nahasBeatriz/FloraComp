@@ -18,7 +18,7 @@ model Flower {
   description String?
   sunlight    String  // "full_sun" | "part_shade" | "full_shade"
   watering    String  // "frequent" | "average" | "minimum"
-  season      String  // "spring" | "summer" | "fall" | "winter"
+  season      String?  // "spring" | "summer" | "fall" | "winter"
   imageUrl    String?
   createdAt   DateTime @default(now())
 
