@@ -97,7 +97,7 @@ export default function FavoritesPage() {
                         className="absolute top-2 right-2 w-8 h-8 rounded-full flex items-center justify-center text-base shadow"
                         style={{ background: "var(--bg-card)" }}
                         aria-label="Remover dos favoritos">
-                        ⁠♡
+                        ⁠❤︎
                     </button>
                     </div>
 
