@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback, Suspense } from "react";
+import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -48,7 +48,7 @@ function ArrangementContent() {
     const [catalog, setCatalog] = useState<Flower[]>([]);
     const [loadingCatalog, setLoadingCatalog] = useState(false);
     const [placed, setPlaced] = useState<PlacedFlower[]>([]);
-    const [counter, setCounter] = useState(0);
+    const counterRef = useRef(0);
     const [arrangementName, setArrangementName] = useState("Meu Arranjo");
     const [saved, setSaved] = useState(false);
     const [search, setSearch] = useState("");
@@ -81,10 +81,8 @@ function ArrangementContent() {
     }, [search, fetchCatalog]);
 
     function addFlower(flower: Flower) {
-        setCounter((c) => {
-        setPlaced((prev) => [...prev, { flower, key: c }]);
-        return c + 1;
-        });
+        const key = counterRef.current++;
+        setPlaced((prev) => [...prev, { flower, key }]);
         setSaved(false);
     }
 
