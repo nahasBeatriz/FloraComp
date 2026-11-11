@@ -11,7 +11,7 @@ export interface Flower {
     description?: string | null;
     sunlight: Sunlight;
     watering: Watering;
-    season: Season;
+    season: Season | null;
     imageUrl?: string | null;
 }
 
