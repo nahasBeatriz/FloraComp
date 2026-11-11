@@ -3,10 +3,10 @@ import type { PerenualFlower, PerenualListResponse, Flower, Sunlight, Watering, 
 const API_KEY = process.env.PERENUAL_API_KEY!;
 const BASE_URL = "https://perenual.com/api/v2";
 
-// Converte os valores da Perenual para os nossos tipos
 function mapSunlight(sunlight: string[] | null | undefined): Sunlight {
     const s = (sunlight?.[0] ?? "").toLowerCase();
     if (s.includes("full sun")) return "full_sun";
+    if (s.includes("full shade")) return "full_shade";
     if (s.includes("part") || s.includes("shade")) return "part_shade";
     return "full_shade";
 }
@@ -18,16 +18,15 @@ function mapWatering(watering: string | null | undefined): Watering {
     return "average";
 }
 
-function mapSeason(season: string | null): Season {
+function mapSeason(season: string | null): Season | null {
     const s = (season ?? "").toLowerCase();
     if (s.includes("spring")) return "spring";
     if (s.includes("summer")) return "summer";
     if (s.includes("fall") || s.includes("autumn")) return "fall";
     if (s.includes("winter")) return "winter";
-    return "spring"; // fallback
+    return null;
 }
 
-// Descarta URLs de paywall da Perenual
 function cleanImageUrl(url: string | null | undefined): string | null {
     if (!url) return null;
     if (url.includes("upgrade_access")) return null;
@@ -54,7 +53,7 @@ export async function fetchFlowers(params: {
     sunlight?: string;
     watering?: string;
     season?: string;
-    } = {}): Promise<{ flowers: Flower[]; lastPage: number }> {
+} = {}): Promise<{ flowers: Flower[]; lastPage: number }> {
     const { page = 1, search, sunlight, watering, season } = params;
 
     const query = new URLSearchParams({ key: API_KEY, page: String(page) });
