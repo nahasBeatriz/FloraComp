@@ -27,6 +27,13 @@ function mapSeason(season: string | null): Season {
     return "spring"; // fallback
 }
 
+// Descarta URLs de paywall da Perenual
+function cleanImageUrl(url: string | null | undefined): string | null {
+    if (!url) return null;
+    if (url.includes("upgrade_access")) return null;
+    return url;
+}
+
 export function perenualToFlower(p: PerenualFlower): Flower {
     return {
         id: p.id,
@@ -37,7 +44,7 @@ export function perenualToFlower(p: PerenualFlower): Flower {
         sunlight: mapSunlight(p.sunlight),
         watering: mapWatering(p.watering),
         season: mapSeason(p.flowering_season),
-        imageUrl: p.default_image?.medium_url ?? p.default_image?.small_url ?? null,
+        imageUrl: cleanImageUrl(p.default_image?.medium_url ?? p.default_image?.small_url),
     };
 }
 
