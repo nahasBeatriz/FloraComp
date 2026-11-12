@@ -6,26 +6,12 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Flower, Season } from "@/types/flower";
 import { SUNLIGHT_LABELS, WATERING_LABELS, SEASON_LABELS } from "@/constants/filters";
+import { checkCompatibility } from "@/utils/compatibility";
+import CompatibilityBadge from "@/components/arrangement/CompatibilityBadge";
 
 interface PlacedFlower {
     flower: Flower;
     key: number;
-}
-
-function compatibilityCheck(flowers: Flower[]): { ok: boolean; message: string } {
-    if (flowers.length < 2) return { ok: true, message: "Adicione pelo menos 2 flores para ver a compatibilidade." };
-
-    const waterings = new Set(flowers.map((f) => f.watering));
-    if (waterings.has("frequent") && waterings.has("minimum")) {
-        return { ok: false, message: "Conflito de rega: você misturou flores de rega frequente com rega mínima." };
-    }
-
-    const sunlights = new Set(flowers.map((f) => f.sunlight));
-    if (sunlights.has("full_sun") && sunlights.has("full_shade")) {
-        return { ok: false, message: "Conflito de luz: sol pleno e sombra total não combinam bem." };
-    }
-
-    return { ok: true, message: "Boa combinação! Essas flores têm necessidades compatíveis." };
 }
 
 function dominantCare(flowers: Flower[]) {
@@ -81,10 +67,21 @@ function ArrangementContent() {
         return () => clearTimeout(timer);
     }, [search, fetchCatalog]);
 
-    function addFlower(flower: Flower) {
+    async function addFlower(flower: Flower) {
         const key = counterRef.current++;
-        setPlaced((prev) => [...prev, { flower, key }]);
         setSaved(false);
+
+        // A listagem do catálogo vem rápida, sem rega/luz confirmados (ver
+        // FlowerCard). Buscamos o dado real antes de colocar no arranjo, pra
+        // compatibilidade e resumo de cuidados não trabalharem com valores
+        // padrão errados.
+        let confirmed = flower;
+        try {
+            const res = await fetch(`/api/flowers/${flower.perenualId ?? flower.id}`);
+            if (res.ok) confirmed = await res.json();
+        } catch {}
+
+        setPlaced((prev) => [...prev, { flower: confirmed, key }]);
     }
 
     function removeFlower(key: number) {
@@ -114,7 +111,7 @@ function ArrangementContent() {
         }
     }
 
-    const compat = compatibilityCheck(placed.map((p) => p.flower));
+    const compat = checkCompatibility(placed.map((p) => p.flower));
     const care = dominantCare(placed.map((p) => p.flower));
 
     return (
@@ -274,18 +271,7 @@ function ArrangementContent() {
                 )}
             </div>
 
-            {placed.length > 0 && (
-                <div
-                className="rounded-2xl border p-4 flex items-start gap-3"
-                style={{
-                    background: compat.ok ? "var(--bg-card)" : "var(--color-flora-rose-100)",
-                    borderColor: compat.ok ? "var(--border-color)" : "var(--color-flora-rose-400)",
-                }}>
-                <p className="text-sm" style={{ color: "var(--text-primary)" }}>
-                    {compat.message}
-                </p>
-                </div>
-            )}
+            {placed.length > 0 && <CompatibilityBadge result={compat} />}
 
             {care && (
                 <div
