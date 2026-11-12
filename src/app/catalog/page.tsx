@@ -24,6 +24,18 @@ function CatalogContent() {
     const [loading, setLoading] = useState(false);
     const [favorites, setFavorites] = useState<Set<number>>(new Set());
 
+    // Atraso antes de aplicar os filtros à busca, pra não disparar um fetch
+    // (que agora inclui chamadas de detalhe) a cada tecla digitada.
+    const [debouncedFilters, setDebouncedFilters] = useState<FlowerFilters>(filters);
+    useEffect(() => {
+        const timeout = setTimeout(() => {
+            setDebouncedFilters((prev) =>
+                JSON.stringify(prev) === JSON.stringify(filters) ? prev : filters
+            );
+        }, 400);
+        return () => clearTimeout(timeout);
+    }, [filters]);
+
     useEffect(() => {
         fetch("/api/favorites")
             .then((r) => r.json())
@@ -38,10 +50,10 @@ function CatalogContent() {
     const fetchFlowers = useCallback(async () => {
         setLoading(true);
         const params = new URLSearchParams({ page: String(page) });
-        if (filters.search) params.set("search", filters.search);
-        if (filters.sunlight) params.set("sunlight", filters.sunlight);
-        if (filters.watering) params.set("watering", filters.watering);
-        if (filters.season) params.set("season", filters.season);
+        if (debouncedFilters.search) params.set("search", debouncedFilters.search);
+        if (debouncedFilters.sunlight) params.set("sunlight", debouncedFilters.sunlight);
+        if (debouncedFilters.watering) params.set("watering", debouncedFilters.watering);
+        if (debouncedFilters.season) params.set("season", debouncedFilters.season);
 
         try {
             const res = await fetch(`/api/flowers?${params}`);
@@ -51,7 +63,7 @@ function CatalogContent() {
         } finally {
             setLoading(false);
         }
-    }, [filters, page]);
+    }, [debouncedFilters, page]);
 
     useEffect(() => { fetchFlowers(); }, [fetchFlowers]);
 
@@ -119,7 +131,8 @@ function CatalogContent() {
                     key={flower.id}
                     flower={flower}
                     isFavorite={favorites.has(flower.perenualId ?? flower.id)}
-                    onToggleFavorite={toggleFavorite}/>
+                    onToggleFavorite={toggleFavorite}
+                    loadCareInfo={!debouncedFilters.season}/>
                 ))}
                 </div>
             )}
@@ -137,7 +150,9 @@ function CatalogContent() {
                     Anterior
                 </button>
                 <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
-                    {page} / {lastPage}
+                    {debouncedFilters.season
+                    ? `Página ${page}` // com filtro de estação o total de páginas não é exato
+                    : `${page} / ${lastPage}`}
                 </span>
                 <button
                     onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
