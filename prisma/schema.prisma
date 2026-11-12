@@ -49,3 +49,18 @@ model Favorite {
   perenualId Int      @unique
   createdAt  DateTime @default(now())
 }
+
+// Cache local do GET /species/details/{id} da API Perenual (separado do
+// model Flower, que guarda a "foto" da flor no momento em que ela entra num
+// arranjo e não deve ser sobrescrito por isso).
+model PerenualDetailsCache {
+  perenualId  Int      @id
+  name        String
+  commonName  String?
+  description String?
+  sunlight    String  // "full_sun" | "part_shade" | "full_shade"
+  watering    String  // "frequent" | "average" | "minimum"
+  season      String?  // "spring" | "summer" | "fall" | "winter"
+  imageUrl    String?
+  fetchedAt   DateTime @default(now())
+}
