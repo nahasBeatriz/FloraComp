@@ -4,14 +4,77 @@ import { useEffect, useState, useRef, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import {
+    DndContext,
+    DragOverlay,
+    PointerSensor,
+    useSensor,
+    useSensors,
+    useDraggable,
+    type DragEndEvent,
+    type DragStartEvent,
+} from "@dnd-kit/core";
 import type { Flower, Season } from "@/types/flower";
+import type { ArrangementItem } from "@/types/arrangement";
 import { SUNLIGHT_LABELS, WATERING_LABELS, SEASON_LABELS } from "@/constants/filters";
 import { checkCompatibility } from "@/utils/compatibility";
 import CompatibilityBadge from "@/components/arrangement/CompatibilityBadge";
+import ArrangementCanvas, { CANVAS_DROPPABLE_ID } from "@/components/arrangement/ArrangementCanvas";
 
-interface PlacedFlower {
-    flower: Flower;
+interface PlacedFlower extends ArrangementItem {
     key: number;
+}
+
+type DragData =
+    | { type: "sidebar"; flower: Flower }
+    | { type: "placed"; key: number };
+
+function clamp(value: number, min: number, max: number): number {
+    return Math.min(Math.max(value, min), max);
+}
+
+// Caixa de 80x80 (w-20 h-20) usada pela miniatura de cada flor no canvas.
+const PLACED_ITEM_SIZE = 80;
+
+function CatalogItem({ flower, onAdd }: { flower: Flower; onAdd: () => void }) {
+    const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
+        id: `sidebar-${flower.perenualId ?? flower.id}`,
+        data: { type: "sidebar", flower } satisfies DragData,
+    });
+
+    return (
+        <button
+        ref={setNodeRef}
+        {...listeners}
+        {...attributes}
+        onClick={onAdd}
+        className="flex items-center gap-3 p-2 rounded-xl text-left transition-colors hover:opacity-80 cursor-grab active:cursor-grabbing touch-none"
+        style={{ background: "var(--bg-surface)", opacity: isDragging ? 0.4 : 1 }}>
+        <div
+            className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0"
+            style={{ background: "var(--border-color)" }}>
+            {flower.imageUrl ? (
+            <Image
+                src={flower.imageUrl}
+                alt={flower.commonName ?? flower.name}
+                fill
+                className="object-cover"
+                sizes="40px"/>
+            ) : (
+            <div className="flex items-center justify-center h-full text-lg">꩜</div>
+            )}
+        </div>
+        <div className="flex flex-col min-w-0">
+            <span className="text-xs font-medium truncate" style={{ color: "var(--text-primary)" }}>
+            {flower.commonName ?? flower.name}
+            </span>
+            <span className="text-xs truncate italic" style={{ color: "var(--text-secondary)" }}>
+            {flower.name}
+            </span>
+        </div>
+        <span className="ml-auto text-lg shrink-0 pointer-events-none">＋</span>
+        </button>
+    );
 }
 
 function dominantCare(flowers: Flower[]) {
@@ -39,6 +102,11 @@ function ArrangementContent() {
     const [arrangementName, setArrangementName] = useState("Meu Arranjo");
     const [saved, setSaved] = useState(false);
     const [search, setSearch] = useState("");
+    const [activeDragFlower, setActiveDragFlower] = useState<Flower | null>(null);
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    );
 
     const fetchCatalog = useCallback(async (q = "") => {
         setLoadingCatalog(true);
@@ -67,7 +135,7 @@ function ArrangementContent() {
         return () => clearTimeout(timer);
     }, [search, fetchCatalog]);
 
-    async function addFlower(flower: Flower) {
+    async function addFlower(flower: Flower, position?: { x: number; y: number }) {
         const key = counterRef.current++;
         setSaved(false);
 
@@ -81,12 +149,58 @@ function ArrangementContent() {
             if (res.ok) confirmed = await res.json();
         } catch {}
 
-        setPlaced((prev) => [...prev, { flower: confirmed, key }]);
+        setPlaced((prev) => {
+            // Sem posição explícita (clique em vez de arrastar), espalha em
+            // uma grade simples pra não empilhar tudo no canto.
+            const index = prev.length;
+            const { x, y } = position ?? {
+                x: 16 + (index % 5) * 92,
+                y: 16 + Math.floor(index / 5) * 92,
+            };
+            return [...prev, { flower: confirmed, key, positionX: x, positionY: y }];
+        });
     }
 
     function removeFlower(key: number) {
         setPlaced((prev) => prev.filter((p) => p.key !== key));
         setSaved(false);
+    }
+
+    function handleDragStart(event: DragStartEvent) {
+        const data = event.active.data.current as DragData | undefined;
+        if (!data) return;
+        if (data.type === "sidebar") {
+            setActiveDragFlower(data.flower);
+        } else {
+            setActiveDragFlower(placed.find((p) => p.key === data.key)?.flower ?? null);
+        }
+    }
+
+    function handleDragEnd(event: DragEndEvent) {
+        setActiveDragFlower(null);
+        const { active, over, delta } = event;
+        if (!over || over.id !== CANVAS_DROPPABLE_ID) return;
+
+        const data = active.data.current as DragData | undefined;
+        if (!data) return;
+
+        const maxX = Math.max(0, over.rect.width - PLACED_ITEM_SIZE);
+        const maxY = Math.max(0, over.rect.height - PLACED_ITEM_SIZE);
+
+        if (data.type === "sidebar") {
+            const translated = active.rect.current.translated;
+            if (!translated) return;
+            addFlower(data.flower, {
+                x: clamp(translated.left - over.rect.left, 0, maxX),
+                y: clamp(translated.top - over.rect.top, 0, maxY),
+            });
+        } else {
+            setPlaced((prev) => prev.map((p) => p.key !== data.key ? p : {
+                ...p,
+                positionX: clamp(p.positionX + delta.x, 0, maxX),
+                positionY: clamp(p.positionY + delta.y, 0, maxY),
+            }));
+        }
     }
 
     // Salva o arranjo no banco via API
@@ -100,8 +214,8 @@ function ArrangementContent() {
                     name: arrangementName,
                     flowers: placed.map((p) => ({
                         flower: p.flower,
-                        positionX: 0,
-                        positionY: 0,
+                        positionX: p.positionX,
+                        positionY: p.positionY,
                     })),
                 }),
             });
@@ -125,6 +239,7 @@ function ArrangementContent() {
             Escolha flores do catálogo e monte sua composição
         </p>
 
+        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex flex-col lg:flex-row gap-6">
             <div
             className="w-full lg:w-72 shrink-0 rounded-2xl border p-4 flex flex-col gap-3"
@@ -132,6 +247,9 @@ function ArrangementContent() {
             <h2 className="font-semibold text-sm" style={{ color: "var(--text-primary)" }}>
                 Flores disponíveis
             </h2>
+            <p className="text-xs -mt-2" style={{ color: "var(--text-secondary)" }}>
+                Arraste pro canvas ou clique pra adicionar
+            </p>
             <input
                 type="text"
                 placeholder="Buscar..."
@@ -151,39 +269,10 @@ function ArrangementContent() {
             ) : (
                 <div className="flex flex-col gap-2 overflow-y-auto max-h-[480px] pr-1">
                 {catalog.map((flower) => (
-                    <button
+                    <CatalogItem
                     key={flower.perenualId ?? flower.id}
-                    onClick={() => addFlower(flower)}
-                    className="flex items-center gap-3 p-2 rounded-xl text-left transition-colors hover:opacity-80"
-                    style={{ background: "var(--bg-surface)" }}>
-                    <div
-                        className="relative w-10 h-10 rounded-lg overflow-hidden shrink-0"
-                        style={{ background: "var(--border-color)" }}>
-                        {flower.imageUrl ? (
-                        <Image
-                            src={flower.imageUrl}
-                            alt={flower.commonName ?? flower.name}
-                            fill
-                            className="object-cover"
-                            sizes="40px"/>
-                        ) : (
-                        <div className="flex items-center justify-center h-full text-lg">꩜</div>
-                        )}
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                        <span
-                        className="text-xs font-medium truncate"
-                        style={{ color: "var(--text-primary)" }}>
-                        {flower.commonName ?? flower.name}
-                        </span>
-                        <span
-                        className="text-xs truncate italic"
-                        style={{ color: "var(--text-secondary)" }}>
-                        {flower.name}
-                        </span>
-                    </div>
-                    <span className="ml-auto text-lg shrink-0">＋</span>
-                    </button>
+                    flower={flower}
+                    onAdd={() => addFlower(flower)}/>
                 ))}
                 </div>
             )}
@@ -222,54 +311,7 @@ function ArrangementContent() {
                 </div>
             </div>
 
-            <div
-                className="rounded-2xl border min-h-64 p-4 flex flex-wrap gap-3 content-start"
-                style={{ background: "var(--bg-surface)", borderColor: "var(--border-color)" }}>
-                {placed.length === 0 ? (
-                <div
-                    className="w-full flex flex-col items-center justify-center h-48 gap-2"
-                    style={{ color: "var(--text-secondary)" }}>
-                    <span className="text-4xl">☘</span>
-                    <p className="text-sm">Clique nas flores ao lado para adicioná-las aqui</p>
-                </div>
-                ) : (
-                placed.map(({ flower, key }) => (
-                    <div
-                    key={key}
-                    className="flex flex-col items-center gap-1 group relative"
-                    >
-                    <div
-                        className="relative w-20 h-20 rounded-xl overflow-hidden border"
-                        style={{
-                        background: "var(--bg-card)",
-                        borderColor: "var(--border-color)",
-                        }}>
-                        {flower.imageUrl ? (
-                        <Image
-                            src={flower.imageUrl}
-                            alt={flower.commonName ?? flower.name}
-                            fill
-                            className="object-cover"
-                            sizes="80px"/>
-                        ) : (
-                        <div className="flex items-center justify-center h-full text-3xl">⚘</div>
-                        )}
-                        <button
-                        onClick={() => removeFlower(key)}
-                        className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full text-xs flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                        style={{ background: "rgba(0,0,0,0.6)", color: "#fff" }}>
-                        ✕
-                        </button>
-                    </div>
-                    <span
-                        className="text-xs text-center max-w-20 leading-tight"
-                        style={{ color: "var(--text-secondary)" }}>
-                        {flower.commonName ?? flower.name}
-                    </span>
-                    </div>
-                ))
-                )}
-            </div>
+            <ArrangementCanvas placed={placed} onRemove={removeFlower} />
 
             {placed.length > 0 && <CompatibilityBadge result={compat} />}
 
@@ -315,6 +357,26 @@ function ArrangementContent() {
             )}
             </div>
         </div>
+
+        <DragOverlay>
+            {activeDragFlower && (
+            <div
+                className="relative w-20 h-20 rounded-xl overflow-hidden border shadow-lg"
+                style={{ background: "var(--bg-card)", borderColor: "var(--border-color)" }}>
+                {activeDragFlower.imageUrl ? (
+                <Image
+                    src={activeDragFlower.imageUrl}
+                    alt={activeDragFlower.commonName ?? activeDragFlower.name}
+                    fill
+                    className="object-cover"
+                    sizes="80px"/>
+                ) : (
+                <div className="flex items-center justify-center h-full text-3xl">⚘</div>
+                )}
+            </div>
+            )}
+        </DragOverlay>
+        </DndContext>
         </main>
     );
 }
