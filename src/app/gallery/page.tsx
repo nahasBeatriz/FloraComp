@@ -142,6 +142,7 @@ export default function GalleryPage() {
     }, []);
 
     function deleteArrangement(id: number) {
+        if (!window.confirm("Tem certeza que deseja excluir este arranjo?")) return;
         setArrangements((prev) => prev.filter((a) => a.id !== id));
         fetch(`/api/arrangements/${id}`, { method: "DELETE" }).catch(() => {});
     }
