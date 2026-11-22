@@ -1,8 +1,9 @@
 "use client";
 
 import { useDroppable } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { ArrangementItem } from "@/types/arrangement";
-import DraggableFlower from "./DraggableFlower";
+import SortableFlower from "./SortableFlower";
 
 interface Props {
     placed: (ArrangementItem & { key: number })[];
@@ -17,29 +18,33 @@ export default function ArrangementCanvas({ placed, onRemove }: Props) {
     return (
         <div
         ref={setNodeRef}
-        className="relative rounded-2xl border min-h-[420px] overflow-hidden transition-colors"
+        className="rounded-2xl border min-h-[420px] p-4 transition-colors"
         style={{
             background: "var(--bg-surface)",
             borderColor: isOver ? "var(--color-flora-green-600)" : "var(--border-color)",
         }}>
-        {placed.length === 0 && (
+        {placed.length === 0 ? (
             <div
-            className="absolute inset-0 flex flex-col items-center justify-center gap-2 pointer-events-none"
+            className="flex flex-col items-center justify-center gap-2 h-full min-h-[380px]"
             style={{ color: "var(--text-secondary)" }}>
             <span className="text-4xl">☘</span>
             <p className="text-sm">Arraste as flores ao lado para esta área</p>
             </div>
+        ) : (
+            <SortableContext
+            items={placed.map((p) => `placed-${p.key}`)}
+            strategy={verticalListSortingStrategy}>
+            <ul className="flex flex-col gap-2">
+                {placed.map(({ flower, key }) => (
+                <SortableFlower
+                    key={key}
+                    placedKey={key}
+                    flower={flower}
+                    onRemove={() => onRemove(key)}/>
+                ))}
+            </ul>
+            </SortableContext>
         )}
-
-        {placed.map(({ flower, key, positionX, positionY }) => (
-            <DraggableFlower
-            key={key}
-            placedKey={key}
-            flower={flower}
-            x={positionX}
-            y={positionY}
-            onRemove={() => onRemove(key)}/>
-        ))}
         </div>
     );
 }

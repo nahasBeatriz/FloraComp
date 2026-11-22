@@ -8,12 +8,14 @@ import {
     DndContext,
     DragOverlay,
     PointerSensor,
+    closestCenter,
     useSensor,
     useSensors,
     useDraggable,
     type DragEndEvent,
     type DragStartEvent,
 } from "@dnd-kit/core";
+import { arrayMove } from "@dnd-kit/sortable";
 import type { Flower, Season } from "@/types/flower";
 import type { ArrangementItem } from "@/types/arrangement";
 import { SUNLIGHT_LABELS, WATERING_LABELS, SEASON_LABELS } from "@/constants/filters";
@@ -30,13 +32,6 @@ interface PlacedFlower extends ArrangementItem {
 type DragData =
     | { type: "sidebar"; flower: Flower }
     | { type: "placed"; key: number };
-
-function clamp(value: number, min: number, max: number): number {
-    return Math.min(Math.max(value, min), max);
-}
-
-// Caixa de 80x80 (w-20 h-20) usada pela miniatura de cada flor no canvas.
-const PLACED_ITEM_SIZE = 80;
 
 function CatalogItem({ flower, onAdd }: { flower: Flower; onAdd: () => void }) {
     const { attributes, listeners, setNodeRef, isDragging } = useDraggable({
@@ -147,11 +142,15 @@ function ArrangementContent() {
             if (!data) return;
             setEditingId(data.id);
             setArrangementName(data.name);
+            // A ordem da lista é guardada em positionX (ver saveArrangement);
+            // positionY não é usado nesse modelo.
             setPlaced(
-                data.flowers.map((f) => ({
-                    ...f,
-                    key: counterRef.current++,
-                }))
+                [...data.flowers]
+                    .sort((a, b) => a.positionX - b.positionX)
+                    .map((f) => ({
+                        ...f,
+                        key: counterRef.current++,
+                    }))
             );
         })
         .catch(() => {});
@@ -162,7 +161,7 @@ function ArrangementContent() {
         return () => clearTimeout(timer);
     }, [search, fetchCatalog]);
 
-    async function addFlower(flower: Flower, position?: { x: number; y: number }) {
+    async function addFlower(flower: Flower, insertIndex?: number) {
         const key = counterRef.current++;
         setSaved(false);
 
@@ -177,14 +176,10 @@ function ArrangementContent() {
         } catch {}
 
         setPlaced((prev) => {
-            // Sem posição explícita (clique em vez de arrastar), espalha em
-            // uma grade simples pra não empilhar tudo no canto.
-            const index = prev.length;
-            const { x, y } = position ?? {
-                x: 16 + (index % 5) * 92,
-                y: 16 + Math.floor(index / 5) * 92,
-            };
-            return [...prev, { flower: confirmed, key, positionX: x, positionY: y }];
+            const next = [...prev];
+            const at = insertIndex ?? next.length;
+            next.splice(at, 0, { flower: confirmed, key, positionX: 0, positionY: 0 });
+            return next;
         });
     }
 
@@ -203,30 +198,33 @@ function ArrangementContent() {
         }
     }
 
+    // O arranjo é uma lista, não um canvas livre: soltar sobre um item
+    // existente insere/reordena naquela posição; soltar na área vazia do
+    // canvas joga pro fim da lista (ver ArrangementCanvas).
     function handleDragEnd(event: DragEndEvent) {
         setActiveDragFlower(null);
-        const { active, over, delta } = event;
-        if (!over || over.id !== CANVAS_DROPPABLE_ID) return;
+        const { active, over } = event;
+        if (!over) return;
 
         const data = active.data.current as DragData | undefined;
         if (!data) return;
 
-        const maxX = Math.max(0, over.rect.width - PLACED_ITEM_SIZE);
-        const maxY = Math.max(0, over.rect.height - PLACED_ITEM_SIZE);
+        const overData = over.data.current as DragData | undefined;
+        const targetIndex =
+            overData?.type === "placed"
+                ? placed.findIndex((p) => p.key === overData.key)
+                : over.id === CANVAS_DROPPABLE_ID
+                ? placed.length
+                : -1;
+
+        if (targetIndex === -1) return;
 
         if (data.type === "sidebar") {
-            const translated = active.rect.current.translated;
-            if (!translated) return;
-            addFlower(data.flower, {
-                x: clamp(translated.left - over.rect.left, 0, maxX),
-                y: clamp(translated.top - over.rect.top, 0, maxY),
-            });
+            addFlower(data.flower, targetIndex);
         } else {
-            setPlaced((prev) => prev.map((p) => p.key !== data.key ? p : {
-                ...p,
-                positionX: clamp(p.positionX + delta.x, 0, maxX),
-                positionY: clamp(p.positionY + delta.y, 0, maxY),
-            }));
+            const fromIndex = placed.findIndex((p) => p.key === data.key);
+            if (fromIndex === -1 || fromIndex === targetIndex) return;
+            setPlaced((prev) => arrayMove(prev, fromIndex, targetIndex));
         }
     }
 
@@ -241,10 +239,12 @@ function ArrangementContent() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify({
                         name: arrangementName,
-                        flowers: placed.map((p) => ({
+                        // positionX guarda a ordem na lista (ver handleDragEnd);
+                        // positionY não é usado nesse modelo.
+                        flowers: placed.map((p, index) => ({
                             flower: p.flower,
-                            positionX: p.positionX,
-                            positionY: p.positionY,
+                            positionX: index,
+                            positionY: 0,
                         })),
                     }),
                 }
@@ -274,7 +274,11 @@ function ArrangementContent() {
             Escolha flores do catálogo e monte sua composição
         </p>
 
-        <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
+        <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}>
         <div className="flex flex-col lg:flex-row gap-6">
             <div
             className="w-full lg:w-72 shrink-0 rounded-2xl border p-4 flex flex-col gap-3"
