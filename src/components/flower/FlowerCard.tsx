@@ -1,44 +1,29 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type { Flower } from "@/types/flower";
 import { SUNLIGHT_LABELS, WATERING_LABELS, SEASON_LABELS } from "@/constants/filters";
+
+type CareInfo = Pick<Flower, "sunlight" | "watering" | "season">;
 
 interface Props {
     flower: Flower;
     isFavorite?: boolean;
     onToggleFavorite?: (id: number) => void;
     // Quando true, a flor veio sem rega/luz/estação confirmadas (listagem
-    // rápida, sem bater no Plant Details) e o card busca isso sozinho.
+    // rápida, sem bater no Plant Details) e o card espera o pai buscar isso
+    // em lote pra todos os cards visíveis (ver catalog/page.tsx) e repassar
+    // pela prop careInfo quando chegar.
     loadCareInfo?: boolean;
+    careInfo?: CareInfo;
 }
 
-type CareInfo = Pick<Flower, "sunlight" | "watering" | "season">;
-
-export default function FlowerCard({ flower, isFavorite = false, onToggleFavorite, loadCareInfo = false }: Props) {
-    const [care, setCare] = useState<CareInfo | null>(null);
-
-    useEffect(() => {
-        if (!loadCareInfo) return;
-        let cancelled = false;
-        const id = flower.perenualId ?? flower.id;
-
-        fetch(`/api/flowers/${id}`)
-            .then((r) => (r.ok ? r.json() : null))
-            .then((d: Flower | null) => {
-                if (!cancelled && d) setCare({ sunlight: d.sunlight, watering: d.watering, season: d.season });
-            })
-            .catch(() => {});
-
-        return () => { cancelled = true; };
-    }, [loadCareInfo, flower.perenualId, flower.id]);
-
-    const careReady = !loadCareInfo || care !== null;
-    const sunlight = care?.sunlight ?? flower.sunlight;
-    const watering = care?.watering ?? flower.watering;
-    const season = care?.season ?? flower.season;
+export default function FlowerCard({ flower, isFavorite = false, onToggleFavorite, loadCareInfo = false, careInfo }: Props) {
+    const careReady = !loadCareInfo || careInfo !== undefined;
+    const sunlight = careInfo?.sunlight ?? flower.sunlight;
+    const watering = careInfo?.watering ?? flower.watering;
+    const season = careInfo?.season ?? flower.season;
 
     return (
         <div className="rounded-2xl overflow-hidden border flex flex-col"

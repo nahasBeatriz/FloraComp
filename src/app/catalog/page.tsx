@@ -11,6 +11,8 @@ import type { Season, Sunlight, Watering } from "@/types/flower";
 import Toast from "@/components/ui/Toast";
 import { useToast } from "@/hooks/useToast";
 
+type CareInfo = Pick<Flower, "sunlight" | "watering" | "season">;
+
 // Tamanho de página do catálogo (deve bater com APP_PAGE_SIZE em services/perenualApi.ts).
 // Repetido aqui porque aquele módulo não é seguro pra importar num client component
 // (acessa Prisma e variáveis de ambiente de servidor no escopo do módulo).
@@ -29,7 +31,9 @@ function CatalogContent() {
     const [page, setPage] = useState(1);
     const [lastPage, setLastPage] = useState(1);
     const [loading, setLoading] = useState(false);
+    const [fetchError, setFetchError] = useState(false);
     const [favorites, setFavorites] = useState<Set<number>>(new Set());
+    const [care, setCare] = useState<Record<number, CareInfo>>({});
     const { toastMessage, showToast } = useToast();
 
     // Atraso antes de aplicar os filtros à busca, pra não disparar um fetch
@@ -65,15 +69,40 @@ function CatalogContent() {
 
         try {
             const res = await fetch(`/api/flowers?${params}`);
+            if (!res.ok) throw new Error();
             const json = await res.json();
             setFlowers(json.data ?? []);
             setLastPage(json.lastPage ?? 1);
+            setFetchError(false);
+        } catch {
+            setFlowers([]);
+            setFetchError(true);
         } finally {
             setLoading(false);
         }
     }, [debouncedFilters, page]);
 
     useEffect(() => { fetchFlowers(); }, [fetchFlowers]);
+
+    // Busca luz/rega/estação de todos os cards visíveis em uma única chamada
+    // (em vez de uma por card) — a listagem básica da Perenual não traz isso
+    // confirmado (ver fetchFlowers em services/perenualApi.ts), e buscar card
+    // por card multiplicava por até 10x o consumo da cota diária da API a
+    // cada página vista.
+    useEffect(() => {
+        if (debouncedFilters.season || flowers.length === 0) return;
+        let cancelled = false;
+        const ids = flowers.map((f) => f.perenualId ?? f.id);
+
+        fetch(`/api/flowers/care?ids=${ids.join(",")}`)
+            .then((r) => (r.ok ? r.json() : {}))
+            .then((data: Record<number, CareInfo>) => {
+                if (!cancelled) setCare(data);
+            })
+            .catch(() => {});
+
+        return () => { cancelled = true; };
+    }, [flowers, debouncedFilters.season]);
 
     const handleFilterChange = (f: FlowerFilters) => {
         setFilters(f);
@@ -122,6 +151,21 @@ function CatalogContent() {
                 <div className="flex justify-center items-center h-48">
                 <span className="text-3xl animate-spin">಄</span>
                 </div>
+            ) : fetchError ? (
+                <div
+                className="text-center py-16 rounded-2xl border"
+                style={{
+                    color: "var(--text-secondary)",
+                    borderColor: "var(--color-flora-rose-400)",
+                    background: "var(--bg-card)",
+                }}>
+                <p className="text-4xl mb-3">⚠</p>
+                <p>Não foi possível carregar o catálogo agora.</p>
+                <p className="text-xs mt-1">
+                    A API de flores pode estar temporariamente indisponível (ex: limite diário de
+                    requisições). Tente novamente em alguns instantes.
+                </p>
+                </div>
             ) : flowers.length === 0 ? (
                 <div
                 className="text-center py-16 rounded-2xl border"
@@ -140,18 +184,22 @@ function CatalogContent() {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {flowers.map((flower) => (
-                    <FlowerCard
-                    key={flower.id}
-                    flower={flower}
-                    isFavorite={favorites.has(flower.perenualId ?? flower.id)}
-                    onToggleFavorite={toggleFavorite}
-                    loadCareInfo={!debouncedFilters.season}/>
-                ))}
+                {flowers.map((flower) => {
+                    const id = flower.perenualId ?? flower.id;
+                    return (
+                        <FlowerCard
+                        key={flower.id}
+                        flower={flower}
+                        isFavorite={favorites.has(id)}
+                        onToggleFavorite={toggleFavorite}
+                        loadCareInfo={!debouncedFilters.season}
+                        careInfo={care[id]}/>
+                    );
+                })}
                 </div>
             )}
 
-            {!loading && lastPage > 1 && (
+            {!loading && !fetchError && lastPage > 1 && (
                 <div className="flex flex-col items-center gap-2 mt-8">
                 <div className="flex justify-center items-center gap-3">
                     <button
