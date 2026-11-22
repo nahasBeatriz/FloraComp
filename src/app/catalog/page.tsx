@@ -9,6 +9,11 @@ import type { FlowerFilters } from "@/types/filters";
 import { DEFAULT_FILTERS } from "@/types/filters";
 import type { Season, Sunlight, Watering } from "@/types/flower";
 
+// Tamanho de página do catálogo (deve bater com APP_PAGE_SIZE em services/perenualApi.ts).
+// Repetido aqui porque aquele módulo não é seguro pra importar num client component
+// (acessa Prisma e variáveis de ambiente de servidor no escopo do módulo).
+const PAGE_SIZE = 10;
+
 function CatalogContent() {
     const searchParams = useSearchParams();
     const [flowers, setFlowers] = useState<Flower[]>([]);
@@ -123,6 +128,11 @@ function CatalogContent() {
                 }}>
                 <p className="text-4xl mb-3">↟↟𓂃 ོ ☼𓂃↟ 𖠰𓂃 ོ𓂃</p>
                 <p>Nenhuma flor encontrada com esses filtros.</p>
+                {debouncedFilters.season && lastPage > page && (
+                    <p className="text-xs mt-1">
+                    O filtro de estação é aplicado página por página — tente &quot;Próxima&quot; antes de desistir.
+                    </p>
+                )}
                 </div>
             ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -138,32 +148,43 @@ function CatalogContent() {
             )}
 
             {!loading && lastPage > 1 && (
-                <div className="flex justify-center items-center gap-3 mt-8">
-                <button
+                <div className="flex flex-col items-center gap-2 mt-8">
+                <div className="flex justify-center items-center gap-3">
+                    <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}
                     disabled={page === 1}
                     className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-opacity"
                     style={{
-                    background: "var(--bg-surface)",
-                    color: "var(--text-secondary)",
+                        background: "var(--bg-surface)",
+                        color: "var(--text-secondary)",
                     }}>
                     Anterior
-                </button>
-                <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
+                    </button>
+                    <span className="text-sm" style={{ color: "var(--text-secondary)" }}>
                     {debouncedFilters.season
-                    ? `Página ${page}` // com filtro de estação o total de páginas não é exato
-                    : `${page} / ${lastPage}`}
-                </span>
-                <button
+                        ? `Página ${page}` // com filtro de estação o total de páginas não é exato
+                        : `${page} / ${lastPage}`}
+                    </span>
+                    <button
                     onClick={() => setPage((p) => Math.min(lastPage, p + 1))}
                     disabled={page === lastPage}
                     className="px-4 py-2 rounded-lg text-sm font-medium disabled:opacity-40 transition-opacity"
                     style={{
-                    background: "var(--bg-surface)",
-                    color: "var(--text-secondary)",
+                        background: "var(--bg-surface)",
+                        color: "var(--text-secondary)",
                     }}>
                     Próxima
-                </button>
+                    </button>
+                </div>
+                {debouncedFilters.season && flowers.length > 0 && flowers.length < PAGE_SIZE && (
+                    // O filtro de estação é aplicado em cima dos APP_PAGE_SIZE itens de
+                    // cada página, então poucos itens aqui não significa que acabaram os
+                    // resultados — só que essa página específica teve poucas flores dessa
+                    // estação (ver fetchFlowers em services/perenualApi.ts).
+                    <p className="text-xs" style={{ color: "var(--text-secondary)" }}>
+                    Poucos resultados nesta página — o filtro de estação varia por página, pode haver mais flores adiante.
+                    </p>
+                )}
                 </div>
             )}
             </div>
