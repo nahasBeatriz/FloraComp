@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { fetchFlowerById } from "@/services/perenualApi";
+import { Prisma } from "@/generated/prisma/client";
 
 export async function GET() {
     try {
@@ -59,7 +60,10 @@ export async function DELETE(req: Request) {
         await prisma.favorite.delete({ where: { perenualId: Number(perenualId) } });
         return new NextResponse(null, { status: 204 });
     } catch (err) {
+        if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2025") {
+            return NextResponse.json({ error: "Favorito não encontrado" }, { status: 404 });
+        }
         console.error("[DELETE /api/favorites]", err);
-        return NextResponse.json({ error: "Favorito não encontrado" }, { status: 404 });
+        return NextResponse.json({ error: "Erro ao remover favorito" }, { status: 500 });
     }
 }
