@@ -95,11 +95,13 @@ function dominantCare(flowers: Flower[]) {
 function ArrangementContent() {
     const searchParams = useSearchParams();
     const preAddId = searchParams.get("add");
+    const editId = searchParams.get("edit");
     const [catalog, setCatalog] = useState<Flower[]>([]);
     const [loadingCatalog, setLoadingCatalog] = useState(false);
     const [placed, setPlaced] = useState<PlacedFlower[]>([]);
     const counterRef = useRef(0);
     const [arrangementName, setArrangementName] = useState("Meu Arranjo");
+    const [editingId, setEditingId] = useState<number | null>(null);
     const [saved, setSaved] = useState(false);
     const [search, setSearch] = useState("");
     const [activeDragFlower, setActiveDragFlower] = useState<Flower | null>(null);
@@ -123,12 +125,34 @@ function ArrangementContent() {
 
     useEffect(() => { fetchCatalog(); }, [fetchCatalog]);
     useEffect(() => {
-        if (!preAddId || catalog.length === 0) return;
+        if (!preAddId || editId || catalog.length === 0) return;
         const flower = catalog.find(
         (f) => String(f.perenualId ?? f.id) === preAddId
         );
         if (flower) addFlower(flower);
-    }, [preAddId, catalog]);
+    }, [preAddId, editId, catalog]);
+
+    // Carrega um arranjo salvo pra edição (vindo da galeria)
+    useEffect(() => {
+        if (!editId) return;
+        const numId = Number(editId);
+        if (isNaN(numId)) return;
+
+        fetch(`/api/arrangements/${numId}`)
+        .then((r) => (r.ok ? r.json() : null))
+        .then((data: { id: number; name: string; flowers: ArrangementItem[] } | null) => {
+            if (!data) return;
+            setEditingId(data.id);
+            setArrangementName(data.name);
+            setPlaced(
+                data.flowers.map((f) => ({
+                    ...f,
+                    key: counterRef.current++,
+                }))
+            );
+        })
+        .catch(() => {});
+    }, [editId]);
 
     useEffect(() => {
         const timer = setTimeout(() => fetchCatalog(search), 400);
@@ -203,22 +227,25 @@ function ArrangementContent() {
         }
     }
 
-    // Salva o arranjo no banco via API
+    // Salva o arranjo no banco via API (cria um novo ou atualiza o existente, se em edição)
     async function saveArrangement() {
         if (placed.length === 0) return;
         try {
-            const res = await fetch("/api/arrangements", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    name: arrangementName,
-                    flowers: placed.map((p) => ({
-                        flower: p.flower,
-                        positionX: p.positionX,
-                        positionY: p.positionY,
-                    })),
-                }),
-            });
+            const res = await fetch(
+                editingId ? `/api/arrangements/${editingId}` : "/api/arrangements",
+                {
+                    method: editingId ? "PUT" : "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                        name: arrangementName,
+                        flowers: placed.map((p) => ({
+                            flower: p.flower,
+                            positionX: p.positionX,
+                            positionY: p.positionY,
+                        })),
+                    }),
+                }
+            );
             if (res.ok) setSaved(true);
         } catch {
             console.error("Erro ao salvar arranjo");
@@ -233,7 +260,7 @@ function ArrangementContent() {
         <h1
             className="text-3xl font-bold mb-2"
             style={{ color: "var(--text-primary)", fontFamily: "Georgia, serif" }}>
-            Montar Arranjo
+            {editingId ? "Editar Arranjo" : "Montar Arranjo"}
         </h1>
         <p className="mb-6 text-sm" style={{ color: "var(--text-secondary)" }}>
             Escolha flores do catálogo e monte sua composição

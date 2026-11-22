@@ -116,12 +116,20 @@ function ArrangementCard({
             </ul>
             )}
 
-            <Link
-            href={`/arrangement`}
-            className="mt-auto text-xs font-medium text-center py-2 rounded-lg transition-colors"
-            style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}>
-            Novo arranjo
-            </Link>
+            <div className="mt-auto flex gap-2">
+                <Link
+                href={`/arrangement?edit=${arrangement.id}`}
+                className="flex-1 text-xs font-medium text-center py-2 rounded-lg transition-colors"
+                style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}>
+                Editar
+                </Link>
+                <Link
+                href={`/arrangement`}
+                className="flex-1 text-xs font-medium text-center py-2 rounded-lg transition-colors"
+                style={{ background: "var(--bg-surface)", color: "var(--text-secondary)" }}>
+                Novo arranjo
+                </Link>
+            </div>
         </div>
         </div>
     );
