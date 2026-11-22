@@ -125,4 +125,5 @@ O Prisma gerencia as seguintes entidades:
 | GET | `/api/arrangements` | Lista todos os arranjos salvos |
 | POST | `/api/arrangements` | Cria um novo arranjo |
 | GET | `/api/arrangements/[id]` | Detalhe de um arranjo |
+| PUT | `/api/arrangements/[id]` | Atualiza nome e flores de um arranjo existente |
 | DELETE | `/api/arrangements/[id]` | Remove um arranjo |
