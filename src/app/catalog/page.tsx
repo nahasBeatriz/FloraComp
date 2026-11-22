@@ -8,6 +8,8 @@ import type { Flower } from "@/types/flower";
 import type { FlowerFilters } from "@/types/filters";
 import { DEFAULT_FILTERS } from "@/types/filters";
 import type { Season, Sunlight, Watering } from "@/types/flower";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 
 // Tamanho de página do catálogo (deve bater com APP_PAGE_SIZE em services/perenualApi.ts).
 // Repetido aqui porque aquele módulo não é seguro pra importar num client component
@@ -28,6 +30,7 @@ function CatalogContent() {
     const [lastPage, setLastPage] = useState(1);
     const [loading, setLoading] = useState(false);
     const [favorites, setFavorites] = useState<Set<number>>(new Set());
+    const { toastMessage, showToast } = useToast();
 
     // Atraso antes de aplicar os filtros à busca, pra não disparar um fetch
     // (que agora inclui chamadas de detalhe) a cada tecla digitada.
@@ -94,11 +97,12 @@ function CatalogContent() {
                 isFav ? next.add(id) : next.delete(id);
                 return next;
             });
+            showToast("Não foi possível atualizar o favorito.");
         });
     };
 
     return (
-        <main className="min-h-screen px-4 py-8 max-w-7xl mx-auto">
+        <section className="min-h-screen px-4 py-8 max-w-7xl mx-auto">
         <h1
             className="text-3xl font-bold mb-2"
             style={{ color: "var(--text-primary)", fontFamily: "Georgia, serif" }}>
@@ -189,7 +193,8 @@ function CatalogContent() {
             )}
             </div>
         </div>
-        </main>
+        <Toast message={toastMessage} />
+        </section>
     );
 }
 

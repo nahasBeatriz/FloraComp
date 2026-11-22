@@ -5,10 +5,13 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Flower } from "@/types/flower";
 import { SUNLIGHT_LABELS, WATERING_LABELS, SEASON_LABELS } from "@/constants/filters";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 
 export default function FavoritesPage() {
     const [flowers, setFlowers] = useState<Flower[]>([]);
     const [loading, setLoading] = useState(true);
+    const { toastMessage, showToast } = useToast();
 
     useEffect(() => {
         fetch("/api/favorites")
@@ -21,16 +24,20 @@ export default function FavoritesPage() {
     }, []);
 
     function removeFavorite(id: number) {
+        const removed = flowers.find((f) => (f.perenualId ?? f.id) === id);
         setFlowers((prev) => prev.filter((f) => (f.perenualId ?? f.id) !== id));
         fetch("/api/favorites", {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ perenualId: id }),
-        }).catch(() => {});
+        }).catch(() => {
+            if (removed) setFlowers((prev) => [...prev, removed]);
+            showToast("Não foi possível remover o favorito.");
+        });
     }
 
     return (
-        <main className="max-w-7xl mx-auto px-4 py-8">
+        <section className="max-w-7xl mx-auto px-4 py-8">
         <div className="flex items-center justify-between mb-2">
             <h1
             className="text-3xl font-bold"
@@ -151,6 +158,7 @@ export default function FavoritesPage() {
             })}
             </div>
         )}
-        </main>
+        <Toast message={toastMessage} />
+        </section>
     );
 }

@@ -6,6 +6,8 @@ import Image from "next/image";
 import Link from "next/link";
 import type { Flower } from "@/types/flower";
 import { SUNLIGHT_LABELS, WATERING_LABELS, SEASON_LABELS } from "@/constants/filters";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 
 const CARE_ICONS: Record<string, string> = {
     full_sun: "𖤓",
@@ -27,6 +29,7 @@ export default function FlowerDetailPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(false);
     const [isFavorite, setIsFavorite] = useState(false);
+    const { toastMessage, showToast } = useToast();
 
     useEffect(() => {
         async function load() {
@@ -66,6 +69,7 @@ export default function FlowerDetailPage() {
             body: JSON.stringify({ perenualId: fid }),
         }).catch(() => {
             setIsFavorite(isFavorite);
+            showToast("Não foi possível atualizar o favorito.");
         });
     };
 
@@ -95,7 +99,7 @@ export default function FlowerDetailPage() {
     }
 
     return (
-        <main className="max-w-4xl mx-auto px-4 py-8">
+        <section className="max-w-4xl mx-auto px-4 py-8">
         <nav className="mb-6 text-sm flex items-center gap-2" style={{ color: "var(--text-secondary)" }}>
             <Link href="/catalog" className="hover:underline">Catálogo</Link>
             <span>/</span>
@@ -185,6 +189,7 @@ export default function FlowerDetailPage() {
             </div>
             </div>
         </div>
-        </main>
+        <Toast message={toastMessage} />
+        </section>
     );
 }

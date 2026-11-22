@@ -20,6 +20,8 @@ import { SUNLIGHT_LABELS, WATERING_LABELS, SEASON_LABELS } from "@/constants/fil
 import { checkCompatibility } from "@/utils/compatibility";
 import CompatibilityBadge from "@/components/arrangement/CompatibilityBadge";
 import ArrangementCanvas, { CANVAS_DROPPABLE_ID } from "@/components/arrangement/ArrangementCanvas";
+import Toast from "@/components/ui/Toast";
+import { useToast } from "@/hooks/useToast";
 
 interface PlacedFlower extends ArrangementItem {
     key: number;
@@ -105,6 +107,7 @@ function ArrangementContent() {
     const [saved, setSaved] = useState(false);
     const [search, setSearch] = useState("");
     const [activeDragFlower, setActiveDragFlower] = useState<Flower | null>(null);
+    const { toastMessage, showToast } = useToast();
 
     const sensors = useSensors(
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
@@ -246,9 +249,14 @@ function ArrangementContent() {
                     }),
                 }
             );
-            if (res.ok) setSaved(true);
+            if (res.ok) {
+                setSaved(true);
+            } else {
+                showToast("Não foi possível salvar o arranjo.");
+            }
         } catch {
             console.error("Erro ao salvar arranjo");
+            showToast("Não foi possível salvar o arranjo.");
         }
     }
 
@@ -256,7 +264,7 @@ function ArrangementContent() {
     const care = dominantCare(placed.map((p) => p.flower));
 
     return (
-        <main className="max-w-7xl mx-auto px-4 py-8">
+        <section className="max-w-7xl mx-auto px-4 py-8">
         <h1
             className="text-3xl font-bold mb-2"
             style={{ color: "var(--text-primary)", fontFamily: "Georgia, serif" }}>
@@ -404,7 +412,8 @@ function ArrangementContent() {
             )}
         </DragOverlay>
         </DndContext>
-        </main>
+        <Toast message={toastMessage} />
+        </section>
     );
 }
 
