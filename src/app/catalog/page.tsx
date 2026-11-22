@@ -32,6 +32,7 @@ function CatalogContent() {
     const [lastPage, setLastPage] = useState(1);
     const [loading, setLoading] = useState(false);
     const [fetchError, setFetchError] = useState(false);
+    const [stale, setStale] = useState(false);
     const [favorites, setFavorites] = useState<Set<number>>(new Set());
     const [care, setCare] = useState<Record<number, CareInfo>>({});
     const { toastMessage, showToast } = useToast();
@@ -74,9 +75,11 @@ function CatalogContent() {
             setFlowers(json.data ?? []);
             setLastPage(json.lastPage ?? 1);
             setFetchError(false);
+            setStale(!!json.stale);
         } catch {
             setFlowers([]);
             setFetchError(true);
+            setStale(false);
         } finally {
             setLoading(false);
         }
@@ -147,6 +150,18 @@ function CatalogContent() {
             </div>
 
             <div className="flex-1">
+            {!loading && !fetchError && stale && (
+                <div
+                className="text-xs rounded-xl px-3 py-2 mb-3 border"
+                style={{
+                    color: "var(--text-secondary)",
+                    borderColor: "var(--border-color)",
+                    background: "var(--bg-card)",
+                }}>
+                ⓘ Mostrando uma versão salva deste catálogo — a API ao vivo está indisponível no momento
+                (ex: limite diário de requisições).
+                </div>
+            )}
             {loading ? (
                 <div className="flex justify-center items-center h-48">
                 <span className="text-3xl animate-spin">಄</span>

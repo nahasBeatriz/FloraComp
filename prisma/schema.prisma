@@ -64,3 +64,14 @@ model PerenualDetailsCache {
   imageUrl    String?
   fetchedAt   DateTime @default(now())
 }
+
+// Cache local do GET /species-list da Perenual (a listagem/paginação do
+// catálogo), chaveado por página-da-API + filtros (ver fetchFlowers em
+// services/perenualApi.ts). Serve de reserva quando a chamada ao vivo falha
+// (cota diária esgotada, API fora do ar): sem isso, só os detalhes de cada
+// flor (PerenualDetailsCache) tinham reserva no banco — a listagem em si não.
+model PerenualListCache {
+  key       String   @id // `${apiPage}:${search}:${sunlight}:${watering}`
+  data      String   // JSON: { data: PerenualFlower[], last_page: number }
+  fetchedAt DateTime @default(now())
+}

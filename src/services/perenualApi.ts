@@ -81,7 +81,7 @@ export async function fetchFlowers(params: {
     sunlight?: string;
     watering?: string;
     season?: string;
-} = {}): Promise<{ flowers: Flower[]; lastPage: number }> {
+} = {}): Promise<{ flowers: Flower[]; lastPage: number; stale?: boolean }> {
     const { page = 1, search, sunlight, watering, season } = params;
 
     // Cada página da Perenual (30 itens) vira SUB_PAGES_PER_API_PAGE páginas
@@ -91,16 +91,36 @@ export async function fetchFlowers(params: {
     const apiPage = Math.floor((page - 1) / SUB_PAGES_PER_API_PAGE) + 1;
     const offsetInApiPage = ((page - 1) % SUB_PAGES_PER_API_PAGE) * APP_PAGE_SIZE;
 
-    const query = new URLSearchParams({ key: API_KEY, page: String(apiPage) });
-    if (search)   query.set("q", search);
-    if (watering) query.set("watering", watering);
-    if (sunlight) query.set("sunlight", sunlight);
+    // Mesma chave usada pra gravar e pra buscar a reserva local (ver abaixo).
+    const listCacheKey = `${apiPage}:${search ?? ""}:${sunlight ?? ""}:${watering ?? ""}`;
 
-    const res = await fetch(`${BASE_URL}/species-list?${query}`, { next: { revalidate: 3600 } });
+    let data: PerenualListResponse;
+    let stale = false;
+    try {
+        const query = new URLSearchParams({ key: API_KEY, page: String(apiPage) });
+        if (search)   query.set("q", search);
+        if (watering) query.set("watering", watering);
+        if (sunlight) query.set("sunlight", sunlight);
 
-    if (!res.ok) throw new Error(`Perenual API error: ${res.status}`);
+        const res = await fetch(`${BASE_URL}/species-list?${query}`, { next: { revalidate: 3600 } });
+        if (!res.ok) throw new Error(`Perenual API error: ${res.status}`);
 
-    const data: PerenualListResponse = await res.json();
+        data = await res.json();
+        await prisma.perenualListCache.upsert({
+            where: { key: listCacheKey },
+            create: { key: listCacheKey, data: JSON.stringify(data) },
+            update: { data: JSON.stringify(data), fetchedAt: new Date() },
+        });
+    } catch (err) {
+        // Sem resposta nova (cota diária esgotada, API fora do ar): cai pra
+        // última listagem salva dessa mesma página+filtros, se houver, em vez
+        // de quebrar o catálogo inteiro (mesma ideia do fetchFlowerById).
+        const cached = await prisma.perenualListCache.findUnique({ where: { key: listCacheKey } });
+        if (!cached) throw err;
+        data = JSON.parse(cached.data);
+        stale = true;
+    }
+
     const pageItems = data.data.slice(offsetInApiPage, offsetInApiPage + APP_PAGE_SIZE);
 
     let flowers: Flower[];
@@ -121,6 +141,7 @@ export async function fetchFlowers(params: {
     return {
         flowers,
         lastPage: data.last_page * SUB_PAGES_PER_API_PAGE,
+        stale,
     };
 }
 

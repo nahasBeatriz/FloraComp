@@ -11,7 +11,7 @@ export async function GET(req: Request) {
     const season = searchParams.get("season") ?? undefined;
 
     try {
-        const { flowers, lastPage } = await fetchFlowers({
+        const { flowers, lastPage, stale } = await fetchFlowers({
             page,
             search,
             sunlight,
@@ -19,7 +19,7 @@ export async function GET(req: Request) {
             season,
         });
 
-        return NextResponse.json({ data: flowers, lastPage });
+        return NextResponse.json({ data: flowers, lastPage, stale });
     } catch (err) {
         console.error("[/api/flowers]", err);
         return NextResponse.json(
