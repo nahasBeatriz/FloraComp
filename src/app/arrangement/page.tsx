@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef, useCallback, Suspense } from "react";
+import { useEffect, useState, useRef, useMemo, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
@@ -108,20 +108,28 @@ function ArrangementContent() {
         useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
     );
 
-    const fetchCatalog = useCallback(async (q = "") => {
+    // A sidebar lê só o que já está confirmado no cache local (ver
+    // /api/flowers/cached), carregado por inteiro uma única vez: a busca
+    // digitada filtra esse array em memória (ver filteredCatalog), sem gastar
+    // requisição nova da cota diária da Perenual a cada tecla.
+    useEffect(() => {
         setLoadingCatalog(true);
-        try {
-            const params = new URLSearchParams({ page: "1" });
-            if (q) params.set("search", q);
-            const res = await fetch(`/api/flowers?${params}`);
-            const json = await res.json();
-            setCatalog(json.data ?? []);
-        } finally {
-            setLoadingCatalog(false);
-        }
+        fetch("/api/flowers/cached")
+            .then((res) => res.json())
+            .then((json) => setCatalog(json.data ?? []))
+            .finally(() => setLoadingCatalog(false));
     }, []);
 
-    useEffect(() => { fetchCatalog(); }, [fetchCatalog]);
+    const filteredCatalog = useMemo(() => {
+        const q = search.trim().toLowerCase();
+        if (!q) return catalog;
+        return catalog.filter(
+            (f) =>
+                f.commonName?.toLowerCase().includes(q) ||
+                f.name.toLowerCase().includes(q)
+        );
+    }, [catalog, search]);
+
     useEffect(() => {
         if (!preAddId || editId || catalog.length === 0) return;
         const flower = catalog.find(
@@ -156,29 +164,18 @@ function ArrangementContent() {
         .catch(() => {});
     }, [editId]);
 
-    useEffect(() => {
-        const timer = setTimeout(() => fetchCatalog(search), 400);
-        return () => clearTimeout(timer);
-    }, [search, fetchCatalog]);
-
-    async function addFlower(flower: Flower, insertIndex?: number) {
+    function addFlower(flower: Flower, insertIndex?: number) {
         const key = counterRef.current++;
         setSaved(false);
 
-        // A listagem do catálogo vem rápida, sem rega/luz confirmados (ver
-        // FlowerCard). Buscamos o dado real antes de colocar no arranjo, pra
-        // compatibilidade e resumo de cuidados não trabalharem com valores
-        // padrão errados.
-        let confirmed = flower;
-        try {
-            const res = await fetch(`/api/flowers/${flower.perenualId ?? flower.id}`);
-            if (res.ok) confirmed = await res.json();
-        } catch {}
-
+        // A sidebar já só lista flores do cache local (rega/luz/estação
+        // confirmados, ver /api/flowers/cached), então o dado recebido aqui
+        // já é o real — sem precisar buscar de novo antes de colocar no
+        // arranjo.
         setPlaced((prev) => {
             const next = [...prev];
             const at = insertIndex ?? next.length;
-            next.splice(at, 0, { flower: confirmed, key, positionX: 0, positionY: 0 });
+            next.splice(at, 0, { flower, key, positionX: 0, positionY: 0 });
             return next;
         });
     }
@@ -307,7 +304,7 @@ function ArrangementContent() {
                 </div>
             ) : (
                 <div className="flex flex-col gap-2 overflow-y-auto max-h-[480px] pr-1">
-                {catalog.map((flower) => (
+                {filteredCatalog.map((flower) => (
                     <CatalogItem
                     key={flower.perenualId ?? flower.id}
                     flower={flower}

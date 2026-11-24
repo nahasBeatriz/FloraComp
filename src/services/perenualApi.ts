@@ -145,6 +145,68 @@ export async function fetchFlowers(params: {
     };
 }
 
+// Todas as flores que já têm detalhe confirmado salvo localmente (ver
+// PerenualDetailsCache acima). Usado pela sidebar de montar arranjo, que lê
+// só daqui em vez de chamar a API ao vivo a cada busca (ver enrichDetailsCache
+// pra popular esse cache aos poucos).
+export async function fetchCachedFlowers(): Promise<Flower[]> {
+    const cached = await prisma.perenualDetailsCache.findMany({
+        orderBy: { commonName: "asc" },
+    });
+    return cached.map(cacheToFlower);
+}
+
+// Busca o detalhe de espécies que ainda não estão no PerenualDetailsCache,
+// percorrendo o species-list da Perenual até achar `limit` novas ou a cota
+// diária acabar (nesse caso para na hora, sem lançar erro, com o que já
+// conseguiu enriquecer).
+export async function enrichDetailsCache(
+    limit: number
+): Promise<{ enriched: number[]; stoppedEarly: boolean }> {
+    const existing = await prisma.perenualDetailsCache.findMany({
+        select: { perenualId: true },
+    });
+    const known = new Set(existing.map((c) => c.perenualId));
+
+    const enriched: number[] = [];
+    let stoppedEarly = false;
+    let apiPage = 1;
+    let lastPage = 1;
+
+    outer: while (enriched.length < limit && apiPage <= lastPage) {
+        const query = new URLSearchParams({ key: API_KEY, page: String(apiPage) });
+        let listData: PerenualListResponse;
+        try {
+            const res = await fetch(`${BASE_URL}/species-list?${query}`, {
+                next: { revalidate: 3600 },
+            });
+            if (!res.ok) throw new Error(`Perenual API error: ${res.status}`);
+            listData = await res.json();
+        } catch {
+            stoppedEarly = true;
+            break;
+        }
+        lastPage = listData.last_page;
+
+        for (const p of listData.data) {
+            if (known.has(p.id)) continue;
+            try {
+                await fetchFlowerById(p.id);
+            } catch {
+                stoppedEarly = true;
+                break outer;
+            }
+            known.add(p.id);
+            enriched.push(p.id);
+            if (enriched.length >= limit) break outer;
+        }
+
+        apiPage++;
+    }
+
+    return { enriched, stoppedEarly };
+}
+
 export async function fetchFlowerById(id: number): Promise<Flower> {
     const cached = await prisma.perenualDetailsCache.findUnique({ where: { perenualId: id } });
     if (cached && Date.now() - cached.fetchedAt.getTime() < DETAILS_CACHE_TTL_MS) {
