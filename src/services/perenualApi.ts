@@ -61,7 +61,7 @@ function cleanImageUrl(url: string | null | undefined): string | null {
     return url;
 }
 
-export function perenualToFlower(p: PerenualFlower): Flower {
+function perenualToFlower(p: PerenualFlower): Flower {
     return {
         id: p.id,
         perenualId: p.id,
