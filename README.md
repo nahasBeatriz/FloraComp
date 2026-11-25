@@ -32,16 +32,17 @@ informações exibidas na interface.
 | Camada | Tecnologia | Função |
 |---|---|---|
 | Runtime | Node.js | Base de execução do servidor |
-| Framework | Next.js 15 (App Router) | Servidor HTTP, páginas e API routes |
+| Framework | Next.js 16 (App Router) | Servidor HTTP, páginas e API routes |
 | Frontend | React 19 + TypeScript | Interface e componentes |
 | Estilização | Tailwind CSS v4 | Estilo e responsividade |
+| Drag and drop | dnd-kit | Montagem interativa do arranjo (arrastar flores pro canvas) |
 | ORM | Prisma 7 | Acesso ao banco de dados |
-| Banco de dados | SQLite (libSQL/Turso) | Persistência de arranjos e favoritos |
+| Banco de dados | SQLite | Persistência de arranjos, favoritos e cache da Perenual |
 | API externa | Perenual API | Dados botânicos das flores |
 
 ## Decisões Técnicas
 
-Este projeto utiliza **Next.js 15** como framework principal, construído sobre **Node.js**.
+Este projeto utiliza **Next.js 16** como framework principal, construído sobre **Node.js**.
 Essa escolha substitui o uso de Express.js puro, pois o Next.js já incorpora internamente um
 servidor HTTP completo, roteamento de páginas e roteamento de API.
 
@@ -50,9 +51,17 @@ do Express: recebem requisições HTTP, processam dados e retornam respostas JSO
 está na convenção — ao invés de registrar rotas manualmente, o Next.js as infere pela
 estrutura de pastas.
 
-A persistência é feita inteiramente via **Prisma ORM** com **SQLite** (driver libSQL). As
+A persistência é feita inteiramente via **Prisma** com **SQLite** (driver libSQL). As
 páginas do frontend se comunicam exclusivamente pelas API routes, que por sua vez usam o
-Prisma Client para ler e escrever no banco.
+Prisma Client para ler e escrever no banco. O único dado mantido fora do banco é a
+preferência de tema (claro/escuro), guardada em `localStorage` no navegador do usuário.
+
+A API da Perenual tem cota diária limitada, então o catálogo e os detalhes de cada flor são
+cacheados no próprio banco (`PerenualListCache` e `PerenualDetailsCache`). Isso evita
+rebuscar a mesma página/flor repetidamente e serve de reserva: se a chamada ao vivo falhar
+(cota esgotada ou API fora do ar), a aplicação cai para o cache local em vez de quebrar. A
+sidebar de montagem de arranjo (`/arrangement`) lê exclusivamente desse cache, carregado uma
+única vez, para não gastar cota a cada tecla digitada na busca.
 
 ## Pré-requisitos
 
@@ -88,7 +97,7 @@ npx prisma generate
 npx prisma db push
 ```
 
-> `prisma db push` cria o arquivo `dev.db` com todas as tabelas definidas em `prisma/schema.prisma` (Flower, Arrangement, ArrangementFlower, Favorite).
+> `prisma db push` cria o arquivo `dev.db` com todas as tabelas definidas em `prisma/schema.prisma` (Flower, Arrangement, ArrangementFlower, Favorite, PerenualDetailsCache, PerenualListCache).
 > Execute este comando sempre que o schema for alterado.
 
 ## Como executar
@@ -108,10 +117,12 @@ O Prisma gerencia as seguintes entidades:
 
 | Tabela | Função |
 |---|---|
-| `Flower` | Cache de flores da Perenual (evita rebusca) |
+| `Flower` | Snapshot da flor no momento em que entra num arranjo |
 | `Arrangement` | Arranjos salvos pelo usuário |
-| `ArrangementFlower` | Relação N:N entre arranjo e flores (com posição) |
+| `ArrangementFlower` | Relação N:N entre arranjo e flores (ordem salva em `positionX`) |
 | `Favorite` | IDs Perenual das flores favoritadas |
+| `PerenualDetailsCache` | Cache do detalhe de cada espécie (`GET /species/details/{id}`) |
+| `PerenualListCache` | Cache da listagem/paginação do catálogo (`GET /species-list`), por página + filtros |
 
 ## Rotas de API
 
@@ -127,3 +138,6 @@ O Prisma gerencia as seguintes entidades:
 | GET | `/api/arrangements/[id]` | Detalhe de um arranjo |
 | PUT | `/api/arrangements/[id]` | Atualiza nome e flores de um arranjo existente |
 | DELETE | `/api/arrangements/[id]` | Remove um arranjo |
+| GET | `/api/flowers/cached` | Lista flores já cacheadas em `PerenualDetailsCache` (usado pela sidebar de montagem de arranjo) |
+| GET | `/api/flowers/care?ids=1,2,3` | Dados de luz/rega/estação de vários IDs em uma única chamada (evita N chamadas por página do catálogo) |
+| POST | `/api/flowers/enrich` | Rota de manutenção: busca e cacheia detalhes de espécies ainda não cacheadas (não é usada pela UI) |
