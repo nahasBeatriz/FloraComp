@@ -75,27 +75,16 @@ export function perenualToFlower(p: PerenualFlower): Flower {
     };
 }
 
-export async function fetchFlowers(params: {
-    page?: number;
-    search?: string;
-    sunlight?: string;
-    watering?: string;
-    season?: string;
-} = {}): Promise<{ flowers: Flower[]; lastPage: number; stale?: boolean }> {
-    const { page = 1, search, sunlight, watering, season } = params;
-
-    // Cada página da Perenual (30 itens) vira SUB_PAGES_PER_API_PAGE páginas
-    // do catálogo; páginas do catálogo que caem na mesma página da Perenual
-    // reaproveitam o fetch cacheado dela (revalidate: 3600) em vez de gastar
-    // uma nova requisição.
-    const apiPage = Math.floor((page - 1) / SUB_PAGES_PER_API_PAGE) + 1;
-    const offsetInApiPage = ((page - 1) % SUB_PAGES_PER_API_PAGE) * APP_PAGE_SIZE;
-
-    // Mesma chave usada pra gravar e pra buscar a reserva local (ver abaixo).
+// Busca uma página (30 itens) do species-list da Perenual, com reserva local
+// em PerenualListCache quando a chamada ao vivo falha (cota diária esgotada,
+// API fora do ar). Retorna null quando não há nem resposta nova nem reserva.
+async function fetchSpeciesListPage(
+    apiPage: number,
+    filters: { search?: string; sunlight?: string; watering?: string }
+): Promise<{ data: PerenualListResponse; stale: boolean } | null> {
+    const { search, sunlight, watering } = filters;
     const listCacheKey = `${apiPage}:${search ?? ""}:${sunlight ?? ""}:${watering ?? ""}`;
 
-    let data: PerenualListResponse;
-    let stale = false;
     try {
         const query = new URLSearchParams({ key: API_KEY, page: String(apiPage) });
         if (search)   query.set("q", search);
@@ -105,38 +94,132 @@ export async function fetchFlowers(params: {
         const res = await fetch(`${BASE_URL}/species-list?${query}`, { next: { revalidate: 3600 } });
         if (!res.ok) throw new Error(`Perenual API error: ${res.status}`);
 
-        data = await res.json();
+        const data: PerenualListResponse = await res.json();
         await prisma.perenualListCache.upsert({
             where: { key: listCacheKey },
             create: { key: listCacheKey, data: JSON.stringify(data) },
             update: { data: JSON.stringify(data), fetchedAt: new Date() },
         });
-    } catch (err) {
-        // Sem resposta nova (cota diária esgotada, API fora do ar): cai pra
-        // última listagem salva dessa mesma página+filtros, se houver, em vez
-        // de quebrar o catálogo inteiro (mesma ideia do fetchFlowerById).
+        return { data, stale: false };
+    } catch {
         const cached = await prisma.perenualListCache.findUnique({ where: { key: listCacheKey } });
-        if (!cached) throw err;
-        data = JSON.parse(cached.data);
-        stale = true;
+        if (!cached) return null;
+        return { data: JSON.parse(cached.data), stale: true };
+    }
+}
+
+interface SeasonMatchState {
+    ids: number[];
+    scannedApiPage: number;
+    reachedEnd: boolean;
+}
+
+// Segurança: no máximo essa quantidade de páginas-API novas é varrida por
+// requisição, pra um filtro de estação raro não gastar a cota do dia inteira
+// numa visita só. O progresso fica salvo (ver abaixo), então clicar em
+// "Próxima" de novo retoma a varredura de onde parou, em vez de do zero.
+const SEASON_SCAN_PAGE_CAP = 5;
+
+// A estação só vem no species/details, não é filtrável no species-list da
+// Perenual: pra paginar o filtro de estação de verdade (sem página vazia
+// seguida de página cheia, ver bug relatado), varremos o catálogo em ordem
+// acumulando os ids que batem com a estação, guardando o progresso em
+// PerenualListCache (chave prefixada "season:") pra não re-varrer do zero a
+// cada requisição nem perder o que já foi descoberto quando a cota acaba no
+// meio do caminho.
+async function getSeasonMatches(
+    season: string,
+    filters: { search?: string; sunlight?: string; watering?: string },
+    neededCount: number
+): Promise<SeasonMatchState> {
+    const key = `season:${season}:${filters.search ?? ""}:${filters.sunlight ?? ""}:${filters.watering ?? ""}`;
+    const cached = await prisma.perenualListCache.findUnique({ where: { key } });
+    const state: SeasonMatchState = cached
+        ? JSON.parse(cached.data)
+        : { ids: [], scannedApiPage: 0, reachedEnd: false };
+
+    const save = () =>
+        prisma.perenualListCache.upsert({
+            where: { key },
+            create: { key, data: JSON.stringify(state) },
+            update: { data: JSON.stringify(state), fetchedAt: new Date() },
+        });
+
+    let pagesScanned = 0;
+    while (state.ids.length < neededCount && !state.reachedEnd && pagesScanned < SEASON_SCAN_PAGE_CAP) {
+        const apiPage = state.scannedApiPage + 1;
+        const page = await fetchSpeciesListPage(apiPage, filters);
+        if (!page) break; // sem resposta nova nem reserva local: para por aqui
+
+        for (const p of page.data.data) {
+            let flower: Flower;
+            try {
+                flower = await fetchFlowerById(p.id);
+            } catch {
+                // cota esgotada no meio da varredura: para tudo aqui, mantendo
+                // scannedApiPage na página anterior pra retomar certo depois.
+                await save();
+                return state;
+            }
+            if (flower.season === season) state.ids.push(p.id);
+        }
+
+        state.scannedApiPage = apiPage;
+        if (apiPage >= page.data.last_page) state.reachedEnd = true;
+        pagesScanned++;
     }
 
-    const pageItems = data.data.slice(offsetInApiPage, offsetInApiPage + APP_PAGE_SIZE);
+    await save();
+    return state;
+}
 
-    let flowers: Flower[];
+export async function fetchFlowers(params: {
+    page?: number;
+    search?: string;
+    sunlight?: string;
+    watering?: string;
+    season?: string;
+} = {}): Promise<{ flowers: Flower[]; lastPage: number; stale?: boolean }> {
+    const { page = 1, search, sunlight, watering, season } = params;
+
     if (season) {
-        // flowering_season só vem no species/details, e não é filtrável no
-        // species-list, então buscamos o detalhe de cada item desta página
-        // (no máximo APP_PAGE_SIZE) e filtramos aqui.
-        flowers = await Promise.all(
-            pageItems.map((p) => fetchFlowerById(p.id).catch(() => perenualToFlower(p)))
-        );
-        flowers = flowers.filter((f) => f.season === season);
-    } else {
-        // Sem filtro de estação, devolvemos a listagem básica rapidamente;
-        // o card busca rega/luz/estação sob demanda (ver FlowerCard).
-        flowers = pageItems.map(perenualToFlower);
+        // Busca (ou continua buscando) ids suficientes pra preencher até a
+        // página pedida; cada página devolvida já vem só com flores que
+        // realmente batem com a estação, em vez de um recorte fixo de 10 itens
+        // da Perenual filtrado depois (que podia dar página vazia à toa).
+        const neededCount = page * APP_PAGE_SIZE;
+        const state = await getSeasonMatches(season, { search, sunlight, watering }, neededCount);
+        const pageIds = state.ids.slice((page - 1) * APP_PAGE_SIZE, page * APP_PAGE_SIZE);
+        const flowers = (
+            await Promise.all(pageIds.map((id) => fetchFlowerById(id).catch(() => null)))
+        ).filter((f): f is Flower => f !== null);
+
+        const knownPages = Math.max(1, Math.ceil(state.ids.length / APP_PAGE_SIZE));
+        return {
+            flowers,
+            // Sem varrer o catálogo inteiro não dá pra saber o total exato de
+            // páginas com essa estação; enquanto a varredura não chegou ao fim
+            // (reachedEnd), deixamos lastPage uma página à frente da já
+            // confirmada, só pra manter o botão "Próxima" disponível.
+            lastPage: state.reachedEnd ? knownPages : knownPages + 1,
+        };
     }
+
+    // Cada página da Perenual (30 itens) vira SUB_PAGES_PER_API_PAGE páginas
+    // do catálogo; páginas do catálogo que caem na mesma página da Perenual
+    // reaproveitam o fetch cacheado dela (revalidate: 3600) em vez de gastar
+    // uma nova requisição.
+    const apiPage = Math.floor((page - 1) / SUB_PAGES_PER_API_PAGE) + 1;
+    const offsetInApiPage = ((page - 1) % SUB_PAGES_PER_API_PAGE) * APP_PAGE_SIZE;
+
+    const result = await fetchSpeciesListPage(apiPage, { search, sunlight, watering });
+    if (!result) throw new Error("Perenual API error: sem resposta e sem reserva local");
+    const { data, stale } = result;
+
+    // Sem filtro de estação, devolvemos a listagem básica rapidamente; o card
+    // busca rega/luz/estação sob demanda (ver FlowerCard).
+    const pageItems = data.data.slice(offsetInApiPage, offsetInApiPage + APP_PAGE_SIZE);
+    const flowers = pageItems.map(perenualToFlower);
 
     return {
         flowers,
