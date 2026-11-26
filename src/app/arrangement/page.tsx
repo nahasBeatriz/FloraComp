@@ -97,6 +97,7 @@ function ArrangementContent() {
     const [loadingCatalog, setLoadingCatalog] = useState(false);
     const [placed, setPlaced] = useState<PlacedFlower[]>([]);
     const counterRef = useRef(0);
+    const addedPreAddIdRef = useRef<string | null>(null);
     const [arrangementName, setArrangementName] = useState("Meu Arranjo");
     const [editingId, setEditingId] = useState<number | null>(null);
     const [saved, setSaved] = useState(false);
@@ -132,10 +133,14 @@ function ArrangementContent() {
 
     useEffect(() => {
         if (!preAddId || editId || catalog.length === 0) return;
+        if (addedPreAddIdRef.current === preAddId) return;
         const flower = catalog.find(
         (f) => String(f.perenualId ?? f.id) === preAddId
         );
-        if (flower) addFlower(flower);
+        if (flower) {
+            addFlower(flower);
+            addedPreAddIdRef.current = preAddId;
+        }
     }, [preAddId, editId, catalog]);
 
     // Carrega um arranjo salvo pra edição (vindo da galeria)
